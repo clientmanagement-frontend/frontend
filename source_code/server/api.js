@@ -787,6 +787,81 @@ pingUrl();
         });
       });
   });
+
+/**
+ * Verifies a user's identity by checking their password.
+ * @param {string} uid - The user ID.
+ * @param {string} password - The password to check.
+ * @returns {Promise<Object>} - Resolves with the user object if successful, or rejects with an error message.
+ */
+function verifyUser(uid, password) {
+  return User.findById(uid)
+    .then((user) => {
+      if (!user) {
+        return Promise.reject({ status: 404, message: "User not found" });
+      }
+
+      return bcrypt.compare(password, user.password).then((passwordCheck) => {
+        if (!passwordCheck) {
+          return Promise.reject({ status: 401, message: "Wrong password" });
+        }
+
+        return user; // Return the user if password is correct
+      });
+    })
+    .catch((error) => {
+      // Handle unexpected errors
+      if (!error.status) {
+        console.error("Error during user verification:", error);
+        error = { status: 500, message: "Internal server error" };
+      }
+      throw error;
+    });
+}
+
+router.post('/update-account', (req, res) => {
+  const { uid, password, newpass, newcompanyname } = req.body;
+
+  verifyUser(uid, password)
+    .then((user) => {
+
+      // Cancel if nothing will change
+      if (!newpass && newcompanyname === user.company) {
+        return res.status(400).send({ message: "No changes provided" });
+      }
+
+      // Prepare the fields to update
+      const updateFields = {};
+      if (newcompanyname) updateFields.company = newcompanyname;
+
+      // Hash the new password if provided
+      if (newpass) {
+        return bcrypt
+          .hash(newpass, 10)
+          .then((hashedPassword) => {
+            updateFields.password = hashedPassword;
+            return User.findOneAndUpdate({ _id: uid }, updateFields, { new: true });
+          });
+      }
+
+      // If only company is updated
+      return User.findOneAndUpdate({ _id: uid }, updateFields, { new: true });
+    })
+    .then((updatedUser) => {
+      if (!updatedUser) {
+        return res.status(400).send({ message: "Bad request" });
+      }
+
+      res.json({ id: updatedUser._id });
+    })
+    .catch((error) => {
+      console.error(error); // Log the error for debugging
+      const status = error.status || 500;
+      const message = error.message || "Internal server error";
+      res.status(status).send({ message });
+    });
+});
+
   
 
 // login / register merged endpoint
@@ -798,7 +873,6 @@ router.post("/log-or-reg", (request, response) => {
     
       // if email exists
       .then((user) => {
-        
         
         // compare the password entered and the hashed password found
         bcrypt
@@ -867,14 +941,12 @@ router.post("/log-or-reg", (request, response) => {
       })
       // catch error if email does not exist
       .catch((e) => {
-
         
         // @REGISTER : EMAIL NOT FOUND
         // hash the password
         bcrypt
         .hash(request.body.password, 5)
         .then((hashedPassword) => {
-          console.log('Registering..')
           // create a new user instance and collect the data
           const user = new User({
             email: request.body.email,

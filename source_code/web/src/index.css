@@ -53,3 +53,62 @@ body {
 .custom-styles .ReactInputVerificationCode__item.is-active:after {
   background-color: #046cde;
 }
+
+
+/* NAVBAR STYLES */
+ul.navbar {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+  }
+
+  ul.navbar li a {
+	display: block;
+	color: gray; /* Set default text color */
+	text-align: center;
+	padding: 12px 12px;
+	text-decoration: none;
+  }
+
+  ul.navbar li a:hover {
+	color: rgb(92, 119, 226);
+  }
+
+  /* CSS for the underlined class */
+  ul.navbar li a.active {
+	color: rgb(92, 119, 226);
+	font-weight: 600;
+  }
+
+  /* Laptop styles */
+  @media (min-width: 600px) {
+	.navbar-container {
+		justify-content: flex-end;
+	}
+  }
+
+
+  /* Mobil Styles */
+  @media(max-width: 600px) {
+	.navbar-container {
+		/* Centers the navbar items instead of to the rightside. */
+		justify-content: center;
+	}
+	.navbar {
+		display: flex;
+		width: 90%;
+	}
+	.laptop-only {
+		display: none;
+	  }
+	
+
+  }
+
+
+  .navbar-container {
+	display: flex;
+	position:relative;
+	top: 10px;
+  }

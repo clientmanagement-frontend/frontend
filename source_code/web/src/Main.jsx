@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios'
 import Login from './Login';
+import { BrowserRouter, useLocation } from "react-router-dom";
+import MyRouter from './MyRouter.jsx';
 
 
 
@@ -11,7 +13,7 @@ const Main = () => {
   document.body.style = 'background: #f2f2f2';
 
   const [user, setUser] = useState(null);
-  const [clients, setClients] = useState(null);
+  //const [clients, setClients] = useState(null);
   const [loading, setLoading] = useState(true);
   
 
@@ -31,7 +33,7 @@ const Main = () => {
           company: response.data.user.company,
         });
   
-        setClients(response.data.user.clients);
+        //setClients(response.data.user.clients);
         setLoading(false);
       })
       .catch(error => {
@@ -55,6 +57,20 @@ const Main = () => {
     
   }, [login]);
 
+
+  // Scroll to top on route change
+  const ScrollToTopOnRouteChange = () => {
+    const { pathname } = useLocation();
+  
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [pathname]);
+  
+    return null; // This component doesn't render anything
+  };
+
+
+
   if (loading) {
     return (
       <p>Loading...</p>
@@ -70,9 +86,10 @@ const Main = () => {
   // Render the main page, user is logged in
   return (
 
-    <p>
-      Website
-    </p>
+    <BrowserRouter>
+      <ScrollToTopOnRouteChange />
+      <MyRouter host={SERVER_URL} />
+    </BrowserRouter>
   );
 };
 

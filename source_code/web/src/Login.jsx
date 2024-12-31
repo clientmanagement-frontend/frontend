@@ -16,8 +16,9 @@ export default function LoginScreen(props) {
   const [status, setStatus] = useState("");
   const [deviceId, setDeviceId] = useState("");
 
+
   useEffect(() => {
-    setDeviceId("web");
+    setDeviceId("webid");
   }, []);
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -140,6 +141,34 @@ export default function LoginScreen(props) {
                   alert("Welcome to the app!");
                 }
               }
+            })
+            .catch((e) => {
+              console.log(e);
+              if (e.response)
+              {
+                
+                const { status } = e.response;
+                if (status === 422)
+                {
+                    // code recieved
+                    return
+                }
+                if (status === 401) {
+                  setStatus("Invalid code. Please try again.");
+                }
+                else if (status === 404) {
+                  setStatus("User not found.");
+                }
+                else if (status === 429) {
+                    setStatus("Too many incorrect attempts.");
+                  }
+              }
+              else {
+              setStatus("Invalid code. Please try again.");
+
+              }
+              setShowCode(false);
+
             });
           }}
           status={status}
