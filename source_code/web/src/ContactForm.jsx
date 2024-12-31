@@ -12,8 +12,9 @@ const ContactForm = (props) => {
     e.preventDefault();
     const formData = {
       name: name,
+      uid: localStorage.getItem('token'),
       email: email,
-      message: message,
+      msg: message,
     };
     axios.post(`${props.host}/contact`, formData)
       .then(function (response) {
