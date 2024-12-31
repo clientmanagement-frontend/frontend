@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import CodeEntry from "./CodeEntry";
 import "bootstrap/dist/css/bootstrap.min.css";
+import BackButton from "./BackButton";
 
 export default function LoginScreen(props) {
   const [email, setEmail] = useState("");
@@ -100,30 +101,12 @@ export default function LoginScreen(props) {
       });
   };
 
-  const BackButton = ({ onClick }) => (
-    <img
-      src={`back.png`}
-      alt="Toggle Form"
-      style={{
-        position: "absolute",
-        top: "10px",
-        left: "10px",
-        zIndex: 1000,
-        width: "50px",
-        height: "50px",
-        cursor: "pointer",
-      }}
-      onClick={() => {
-        setStatus("");
-        onClick();
-      }}
-    />
-  );
+  
 
   if (showCode) {
     return (
       <div>
-        <BackButton onClick={() => setShowCode(false)} />
+        <BackButton onClick={() => {setShowCode(false); setStatus("");}} />
         <CodeEntry
           fulfilled={async (code) => {
             axios.post(`${props.api}/confirmDevice`, { email: email, code: code })
@@ -180,7 +163,7 @@ export default function LoginScreen(props) {
   if (canResetPass) {
     return (
       <form onSubmit={resetPassword} style={{ display: "flex", flexDirection: "column" }}>
-        <BackButton onClick={() => setCanResetPass(false)} />
+        <BackButton onClick={() => {setStatus(""); setCanResetPass(false)}} />
         <h2 className="title">Reset Password</h2>
         <div className="form-floating mb-3">
           <input
@@ -217,7 +200,7 @@ export default function LoginScreen(props) {
   if (forgotPassword) {
     return (
     <form onSubmit={sendResetPassCode} style={{ display: "flex", flexDirection: "column" }}>
-        <BackButton onClick={() => setForgotPassword(false)} />
+        <BackButton onClick={() => { setStatus(""); setForgotPassword(false)}} />
         <h2 class="title">Forgot Password</h2>
      
         <div class="form-floating mb-3">
