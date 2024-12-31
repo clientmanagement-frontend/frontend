@@ -5,7 +5,7 @@ const Trial = require("./trialModel");
 const Options = require("./optionsModel");
 
 async function dbConnect() {
-  mongoose.connect( process.env.MONGO_URI, {dbName: process.env.APP_NAME})
+  mongoose.connect( process.env.MONGO_URI, {dbName: process.env.APP_NAME.replace(" ", "")})
     .then(() => {
       
       console.log("Successfully connected to MongoDB Atlas!");

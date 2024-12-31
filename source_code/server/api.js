@@ -38,6 +38,7 @@
   job.start()
   
 let latest;
+const bypass_confirmations = false
   
 const urlToPing = process.env.PING_URL;
  
@@ -359,7 +360,7 @@ pingUrl();
 
   router.post('/user', (req, response) => {
     // Define fields to exclude from the user object (for security)
-    const excludedFields = [];
+    const excludedFields = ['password'];
 
     // Utility function to remove specified fields from user obj
     const excludeFields = (obj) => {
@@ -601,7 +602,7 @@ pingUrl();
                   user._id,
                   {
                     // Grant trial if applicable
-                    $inc: { tokens: new_user? process.env.TRIAL_TOKENS: 0 },
+                    // $inc: { tokens: new_user? process.env.TRIAL_TOKENS: 0 },
                     $set: { email_confirmed: true }, // Confirmed the email
                     $push: { devices: user.pending_device}
                   },
@@ -866,12 +867,14 @@ router.post("/log-or-reg", (request, response) => {
       })
       // catch error if email does not exist
       .catch((e) => {
+
         
         // @REGISTER : EMAIL NOT FOUND
         // hash the password
         bcrypt
         .hash(request.body.password, 5)
         .then((hashedPassword) => {
+          console.log('Registering..')
           // create a new user instance and collect the data
           const user = new User({
             email: request.body.email,

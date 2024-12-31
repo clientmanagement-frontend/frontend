@@ -17,7 +17,6 @@ password: {
     unique: false,
 },
 
-
 renewal_date: {
     type: Number,
     default: 0
@@ -73,19 +72,10 @@ requests: {
     default: ''
 },
 
-history: {
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-},
-
-meals: {
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-},
-
 devices: {
+    type: Array
+},
+clients: {
     type: Array
 }
 
