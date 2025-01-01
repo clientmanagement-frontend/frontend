@@ -8,7 +8,7 @@ import ContactForm from './ContactForm';
 import Dashboard from './Dashboard';
 
 
-const MyRouter = ({host}) => {
+const MyRouter = (props) => {
    
     return (
       <div style = {{display: "flex", flexDirection: "column", width: "100vw", height: "100vh"}}>
@@ -16,9 +16,28 @@ const MyRouter = ({host}) => {
     
     <Nav></Nav>
       <Routes>
-          <Route index element={<Dashboard/>} />
-          <Route path="account" element={<Account host = {host}/>} />
-          <Route path="contact" element={<ContactForm host = {host}/>} />
+          <Route index element={
+            <Dashboard 
+              clients = {props.clients}
+              tasks = {props.tasks}
+
+              setShowAddTask = {props.setShowAddTask}
+              setShowAddClient = {props.setShowAddClient}
+
+              removeTask = {props.removeTask}
+              removeClient = {props.removeClient}
+
+              currentClient = {props.currentClient}
+              setCurrentClient = {props.setCurrentClient}
+
+              editingClient = {props.editingClient}
+              setEditingClient = {props.setEditingClient}
+
+              
+
+            />} />
+          <Route path="account" element={<Account host = {props.host}/>} />
+          <Route path="contact" element={<ContactForm host = {props.host}/>} />
       </Routes>
     
       

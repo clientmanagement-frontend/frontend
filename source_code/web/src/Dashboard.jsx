@@ -1,47 +1,52 @@
-import React, {useState} from "react";
+import React from "react";
 import ClientList from "./ClientList";
 import ClientView from "./ClientView";
+import Tasks from "./Tasks";
 
-export default function Dashboard() {
-  const clients = [
-    "John Doe",
-    "Jane Smith",
-    "Acme Corporation",
-    "Globex Inc.",
-    "Wayne Enterprises",
-    "Stark Industries",
-    "Pied Piper",
-  ];
+export default function Dashboard(props) {
 
-  const [client, setClient] = useState(null);
-
-  const onClientClick = (client) => {
-    // alert(`You clicked on ${client}`);
-    setClient(client);
-
-  }
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       {/* Left Panel */}
       <div>
-        <ClientList clients={clients} onClientClick={onClientClick} />
+        <ClientList 
+            clients={props.clients} 
+            onClientClick={(client) => props.setCurrentClient(client)}
+
+            delClient={(client) => props.removeClient(client)}
+            addClient={() => props.setShowAddClient(true)}
+
+            
+            />
       </div>
 
       {/* Client View */}
-      {client && (
+      {props.currentClient && (
         <ClientView
-            client={client}
-            onBack={() => setClient(null)}  
+            client={props.currentClient}
+            removeClient = {props.removeClient}
+            onBack={() => props.setCurrentClient(null)}  
+            onEdit={() => {
+                props.setEditingClient(true) // Enable editing mode
+                props.setShowAddClient(true) // Open the modal
+            }}
         />
       )}
 
 
       {/* Main Content */}
-        {!client && (
-            <div style={{ flex: 1, paddingLeft: "20px" }}>
-            <h1>Dashboard</h1>
-            <p>This is the dashboard page</p>
+        {!props.currentClient && (
+            <div style={{flex:1, padding: "10px" }}>
+            {/* <p>View followups, create tasks, manage documents</p> */}
+                <Tasks 
+                    tasks = {props.tasks} 
+                    clients = {props.clients} 
+                    setShowAddTask = {props.setShowAddTask}
+                    removeTask = {props.removeTask}
+
+                    
+                    ></Tasks>
             </div>
         )}
     </div>

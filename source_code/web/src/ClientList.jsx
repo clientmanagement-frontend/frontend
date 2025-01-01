@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 
-const ClientList = ({ clients, onClientClick }) => {
+const ClientList = ({ clients, onClientClick, addClient }) => {
   const [search, setSearch] = useState("");
 
-  const filteredClients = clients.filter((client) =>
-    client.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredClients = clients ? clients.filter((client) =>
+    client.name.toLowerCase().includes(search.toLowerCase())
+  ) : null
 
   return (
     <div
@@ -19,17 +19,20 @@ const ClientList = ({ clients, onClientClick }) => {
       }}
     >
       {/* Search Bar */}
-      <input
-        type="text"
-        className="form-control"
-        placeholder="Search clients..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{ marginBottom: "10px", position: "sticky", top: "0", zIndex: "10" }}
-      />
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: "10px", position: "sticky", top: "0", zIndex: "10"  }}>
+        <input
+            type="text"
+            className="form-control"
+            placeholder="Search clients..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+        />
+        <button type="button" class="btn btn-light" onClick={addClient}>New</button>
+      </div>
+
       {/* Scrollable List */}
       <div style={{ overflowY: "auto", height: "calc(100% - 40px)" }}>
-        {filteredClients.map((client, index) => (
+        {filteredClients?.map((client, index) => (
           <div
             key={index}
             onClick={() => onClientClick(client, index)}
@@ -42,7 +45,7 @@ const ClientList = ({ clients, onClientClick }) => {
             onMouseEnter={(e) => (e.currentTarget.style.fontWeight = "bold")}
             onMouseLeave={(e) => (e.currentTarget.style.fontWeight = "normal")}
           >
-            {client}
+            {client.name}
           </div>
         ))}
       </div>
