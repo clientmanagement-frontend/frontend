@@ -677,6 +677,59 @@ pingUrl();
         }
 })
 
+// Add or edit client
+router.post("/addClient", async(request, response) => {
+  const userId = request.body.userId;
+  const client = request.body.client;
+
+  try {
+    // Check if client._id exists
+    if (client._id) {
+      // Update the existing client
+      const result = await User.updateOne(
+        { _id: userId, "clients._id": client._id },
+        {
+          $set: {
+            "clients.$.name": client.name,
+            "clients.$.address": client.address || "",
+            "clients.$.email": client.email || "",
+            "clients.$.points": client.points || 0,
+          },
+        }
+      );
+      if (result.nModified > 0) {
+        console.log("Client updated successfully.");
+      } else {
+        console.log("No changes made or client not found.");
+      }
+    } else {
+      // Add a new client
+      const result = await User.updateOne(
+        { _id: userId },
+        {
+          $push: {
+            clients: {
+              name: client.name,
+              address: client.address || "N/A",
+              email: client.email || "N/A",
+              points: client.points || 0,
+            },
+          },
+        }
+      );
+      if (result.nModified > 0) {
+        console.log("Client added successfully.");
+      } else {
+        console.log("User not found or no changes made.");
+      }
+    }
+  } catch (error) {
+    console.error("Error updating user clients:", error);
+  }
+});
+
+
+
   // Send help email
   router.post("/contact", (request, response) => {
     const mailOptions = {
