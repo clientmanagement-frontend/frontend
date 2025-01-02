@@ -115,7 +115,7 @@ const Main = () => {
       responseType: "arraybuffer", // Necessary to handle binary data
     });
 
-    setCurrentDocument({template: template, data: response.data});
+    setCurrentDocument({templateId: template._id, data: response.data, fields: template.fields});
   }
 
 

@@ -2,33 +2,12 @@ import React, { useEffect, useState } from "react";
 import BackButton from "./BackButton";
 
 const DocumentEditor = ({ document, onBack, saveDoc }) => {
-  const [fields, setFields] = useState({});
+  const [fields, setFields] = useState(document.fields || {});
   const [documentName, setDocumentName] = useState(
     document.name || "New Document"
   );
 
-  // Initialize fields based on document data
-  useEffect(() => {
-    if (document.data) {
-      // Decode the document data into text
-      const textContent = new TextDecoder("utf-8").decode(document.data);
-      console.log(textContent);
-      console.log(document.data);
 
-
-      // Match all $key$ patterns
-      const matches = textContent.match(/\$[a-zA-Z0-9_]+\$/g);
-
-      // Create fields object with clean keys
-      const foundFields = matches?.reduce((acc, key) => {
-        const cleanKey = key.replace(/\$/g, ""); // Remove $ symbols
-        acc[cleanKey] = document.fields?.[cleanKey] || ""; // Populate existing values or empty
-        return acc;
-      }, {});
-
-      setFields(foundFields || {});
-    }
-  }, [document.data, document.fields]);
 
   // Handle field input changes
   const handleFieldChange = (key, value) => {
@@ -41,7 +20,7 @@ const DocumentEditor = ({ document, onBack, saveDoc }) => {
       _id: document._id,
       name: documentName,
       fields: fields,
-      template: document.template,
+      templateId: document.templateId,
     };
 
     saveDoc(updatedDocument);
