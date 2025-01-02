@@ -20,6 +20,7 @@ const taskSchema = new mongoose.Schema({
 const templateSchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String},
+    fields: { type: Object},
 });
 
 const UserSchema = new mongoose.Schema({

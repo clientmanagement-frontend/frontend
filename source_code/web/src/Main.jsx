@@ -83,10 +83,39 @@ const Main = () => {
     }
   }, [login]);
 
+  // Save document to server
+  const saveDoc = async (doc) => {
+    const formData = {
+      userId: user.id,
+      templateId: doc.template._id,
+      fields: doc.fields,
+      documentId: doc.documentId,
+    }
+
+    axios.post(`${SERVER_URL}/save-document`, formData)
+    .then((response) => {
+      // Success
+      alert("Document saved successfully.");
+    })
+    .catch((error) => {
+      console.log(error);
+      alert("An error occurred. Please try again.");
+    });
+
+  }
+
 
   // Create a new document from a template
-  const createDocument = (template) => {
-    setCurrentDocument(template);
+  const createDocument = async(template) => {
+    const response = await axios.get(`${SERVER_URL}/download-template`, {
+      params: {
+        userId: user.id, // Assuming document contains userId
+        templateId: template._id,
+      },
+      responseType: "arraybuffer", // Necessary to handle binary data
+    });
+
+    setCurrentDocument({template: template, data: response.data});
   }
 
 
@@ -338,6 +367,9 @@ const Main = () => {
         // API URL
         host={SERVER_URL}
 
+        // User
+        user={user}
+
         // Modals
         setShowAddTask={setShowAddTask}
         setShowAddClient={setShowAddClient}
@@ -369,6 +401,8 @@ const Main = () => {
         currentDocument = {currentDocument}
         createDocument = {createDocument}
         setCurrentDocument = {setCurrentDocument}
+
+        saveDoc = {saveDoc}
 
 
 

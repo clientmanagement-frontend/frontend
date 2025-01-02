@@ -18,6 +18,7 @@ const MyRouter = (props) => {
       <Routes>
           <Route index element={
             <Dashboard 
+              user = {props.user}
               clients = {props.clients}
               tasks = {props.tasks}
               templates = {props.templates}
@@ -42,6 +43,8 @@ const MyRouter = (props) => {
               createDocument = {props.createDocument}
               currentDocument = {props.currentDocument}
               setCurrentDocument = {props.setCurrentDocument}
+
+              saveDoc = {props.saveDoc}
 
 
 

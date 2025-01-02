@@ -14,6 +14,8 @@
   const { Storage } = require('megajs')
   const multer = require('multer');
   const fs = require('fs');
+  const { PDFDocument } = require('pdf-lib');
+  const pdf = require('pdf-parse');
 
 
   // DB connection
@@ -917,6 +919,34 @@ async function deleteFile(fullPath, fileId) {
 
 }
 
+// Download a file
+async function downloadFile(fullPath, fileId) {
+  const folders = fullPath.split('/'); // Split the full path into folder names
+
+  let megaFolder = mega.root; // The folder reference, starting at the root
+
+  for (const folder of folders) {
+
+    for (const dir of megaFolder.children) {
+      if (dir.name === folder && dir.directory) {
+        megaFolder = dir;
+        break; // Break out of the loop once the folder is found
+      }
+
+    }
+
+  }
+  // megaFolder is the directory to download the file from
+  for (const file of megaFolder.children) {
+    if (file.name.includes(fileId)) {
+      const data = await file.downloadBuffer()
+
+      return data;
+    }
+  }
+
+}
+
 // Mega make folders
 async function uploadFile(fullPath, file, fileName) {
   const buff = fs.readFileSync(file.path);
@@ -954,6 +984,47 @@ async function uploadFile(fullPath, file, fileName) {
 
 }
 
+// Save PDF 
+router.post('/save-document', async (req, res) => {
+
+  // Load template PDF
+  const pdfBytes = await downloadFile(`${req.body.userId}/templates`, req.body.templateId);
+
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+
+  // Replace placeholders
+  for (const page of pdfDoc.getPages()) {
+    const text = page.getTextContent().items.map(item => item.str).join('');
+    for (const [key, value] of Object.entries(req.body.fields)) {
+      const placeholder = `$${key}$`;
+      text.replace(placeholder, value.split('$')[1]); // Only show the value
+    }
+  }
+
+  const pdfBuffer = await pdfDoc.save();
+  await uploadFile(`${req
+    .body.userId}/documents`, pdfBuffer, `${req.body.documentId}.pdf`)
+    
+res.status(200).send({ message: "Document saved successfully." });
+  
+
+});
+
+// Download template file
+router.get("/download-template", async (request, response) => {
+  const userId = request.query.userId;
+  const templateId = request.query.templateId;
+  try {
+        const file = await downloadFile(`${userId}/templates`, templateId);
+        response.setHeader('Content-Type', 'application/pdf');
+        response.setHeader('Content-Disposition', `attachment; filename=${templateId}.pdf`);
+        response.send(file);
+      
+  } catch (error) {
+    console.error("Error downloading template:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
 
 
 
@@ -962,6 +1033,28 @@ router.post("/add-template", upload.single('file'), async (request, response) =>
   const userId = request.body.userId;
   const template = JSON.parse(request.body.template);
   const file = request.file
+
+  // Update template fields
+  if (file)
+    {
+      const buff = fs.readFileSync(file.path);
+      const data = await pdf(buff);
+
+      const regex = /\$([a-zA-Z0-9_]+)\$([^\$]*)/g;
+      let fields = {};
+      let match;
+
+      while ((match = regex.exec(data.text)) !== null) {
+          const key = match[1];
+          const value = match[2] ? match[2] : "";
+          // Include the value if it is not a newline or whitespace
+          fields[key] = value.charAt(0) === '\n' ? "" : value;
+      }
+
+      template.fields = fields
+
+    }
+  
   try {
 
     // Check if the task has an _id (indicating an update)
