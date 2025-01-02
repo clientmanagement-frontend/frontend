@@ -4,48 +4,72 @@ import ClientView from "./ClientView";
 import Tasks from "./Tasks";
 
 export default function Dashboard(props) {
-
-
-  return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      {/* Left Panel */}
-      <div>
-        <ClientList 
-            clients={props.clients} 
+    return (
+      <div style={{ display: "flex", height: "100vh" }}>
+        {/* Left Panel - ClientList */}
+        {/* Flex shrink here */}
+        <div>
+          <ClientList
+            clients={props.clients}
             onClientClick={(client) => props.setCurrentClient(client)}
-
             addClient={() => props.setShowAddClient(true)}
-
-            
-            />
-      </div>
-
-      {/* Client View */}
-      {props.currentClient && (
-        <ClientView
-            client={props.currentClient}
-            onBack={() => props.setCurrentClient(null)}  
-            onEdit={() => {
-                props.setEditingClient(true) // Enable editing mode
-                props.setShowAddClient(true) // Open the modal
+          />
+        </div>
+  
+        {/* Client View */}
+        {props.currentClient && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              flex: 1,
             }}
-        />
-      )}
-
-
-
-      {/* Main Content */}
-        {!props.currentClient && (
-            <div style={{flex:1, padding: "10px" }}>
-            {/* <p>View followups, create tasks, manage documents</p> */}
-                <Tasks 
-                    tasks = {props.tasks} 
-                    clients = {props.clients} 
-                    setShowAddTask = {props.setShowAddTask}
-                    removeTask = {props.removeTask}
-                ></Tasks>
-            </div>
+          >
+            <ClientView
+              client={props.currentClient}
+              onBack={() => props.setCurrentClient(null)}
+              onEdit={() => {
+                props.setEditingClient(true); // Enable editing mode
+                props.setShowAddClient(true); // Open the modal
+              }}
+            />
+            <Tasks
+              title={`${props.currentClient.name.substring(
+                0,
+                props.currentClient.name.indexOf(" ") > 0
+                  ? props.currentClient.name.indexOf(" ")
+                  : props.currentClient.name.length
+              )}'s Tasks`}
+              tasks={props.tasks[props.currentClient._id] || []}
+              setShowAddTask={props.setShowAddTask}
+              removeTask={props.removeTask}
+              onEdit={(task) => {
+                props.setEditingClient(true); // Enable editing mode
+                props.setCurrentTask(task);
+                props.setShowAddTask(true); // Open the modal
+              }}
+            />
+          </div>
         )}
-    </div>
-  );
-}
+  
+        {/* Main Content */}
+        {!props.currentClient && (
+          <div style={{ flex: 1, padding: "10px" }}>
+            <Tasks
+              title="My Tasks"
+              tasks={props.tasks}
+              setShowAddTask={props.setShowAddTask}
+              removeTask={props.removeTask}
+              onEdit={(task) => {
+                props.setEditingClient(true); // Enable editing mode
+                props.setCurrentTask(task);
+                props.setShowAddTask(true); // Open the modal
+              }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+  

@@ -3,12 +3,25 @@ import Task from "./Task";
 
 const Tasks = (props) => {
 
-    let tasks = Object.values(props.tasks).flat()
+    let tasks = Object.values(props.tasks)
+  .flat()
+  .sort((a, b) => {
+    const dateDiff = new Date(a.due) - new Date(b.due);
+  
+    // If dates are equal, sort by _id lexicographically
+    if (dateDiff === 0) {
+      return a._id.localeCompare(b._id);
+    }
+  
+    return dateDiff;
+  });
+
+
     
     return (
         <div>
             <div style = {{display: "flex", alignItems: "center", gap: 10}}>
-                <h3 style = {{margin: 0}}>My Tasks</h3>
+                <h4 style = {{margin: 0, paddingLeft: 10}}>{props.title}</h4>
                 <img
                     src={`add-button.png`}
                     alt="New Task"
@@ -39,7 +52,7 @@ const Tasks = (props) => {
                             scrollSnapAlign: "start",
                         }}
                     >
-                        <Task task={task} onDone={(task) => props.removeTask(task)} />
+                        <Task task={task} onDone={(task) => props.removeTask(task)} onEdit={(task) => props.onEdit(task)}/>
                     </div>
                 ))}
             </div>

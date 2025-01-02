@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function Task({ task, onDone }) {
+export default function Task({ task, onDone, onEdit }) {
   const calculateDueDate = (due) => {
     const currentDate = new Date();
     const dueDate = new Date(due);
@@ -17,6 +17,7 @@ export default function Task({ task, onDone }) {
 
   return (
     <div
+        onClick={() => onEdit(task)}
       style={{
         backgroundColor: "#f9f9f9",
         border: "1px solid #ddd",
@@ -64,7 +65,7 @@ export default function Task({ task, onDone }) {
           cursor: "pointer",
           fontSize: "14px",
         }}
-        onClick={() => onDone(task)}
+        onClick={(e) => {onDone(task); e.stopPropagation();}}
       >
         Done
       </button>

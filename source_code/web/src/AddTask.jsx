@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 
-const AddTask = ({ clients, close, handle, task }) => {
+const AddTask = ({ clients, close, handle, task, currentClient }) => {
   const getDefaultDueDate = () => {
     const date = new Date();
     date.setDate(date.getDate() + 2);
     return date.toISOString().split("T")[0]; // Format as `YYYY-MM-DD` for `<input type="date">`
   };
 
-  const [taskName, setTaskName] = useState("");
-  const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState(getDefaultDueDate());
-  const [selectedClient, setSelectedClient] = useState(null);
+  const [taskName, setTaskName] = useState(task ? task.name : "");
+  const [description, setDescription] = useState(task ? task.description : "");
+  const [dueDate, setDueDate] = useState(task ? task.due.split("T")[0] : getDefaultDueDate());
+  const [selectedClient, setSelectedClient] = useState(currentClient ?? (task ? task.client : null));
 
   const handleDelete = () => {
     if (task) {
@@ -50,7 +50,7 @@ const AddTask = ({ clients, close, handle, task }) => {
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">
-              {task?._id ? "Edit Task" : "Add New Task"}
+              {(task?._id ? "Edit Task" : "New Task") + (currentClient ? " for " + currentClient.name : "")}
             </h5>
             <button
               type="button"
@@ -101,7 +101,7 @@ const AddTask = ({ clients, close, handle, task }) => {
                   required
                 />
               </div>
-              <div className="mb-3">
+              <div className="mb-3" style={{display: currentClient ? "none" : "block"}}>
                 <label htmlFor="client" className="form-label">
                   Associate with Client
                 </label>

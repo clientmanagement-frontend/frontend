@@ -31,6 +31,7 @@ const MyRouter = (props) => {
               setEditingClient = {props.setEditingClient}
 
               removeTask = {props.removeTask}
+              setCurrentTask = {props.setCurrentTask}
 
 
 

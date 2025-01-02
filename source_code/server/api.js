@@ -786,26 +786,49 @@ router.post("/delete-task", async (request, response) => {
 router.post("/add-task", async (request, response) => {
   const userId = request.body.userId;
   const task = request.body.task;
+  const newClient = task.client ? task.client._id : "none";
+  const curClient = request.body.curClient ? request.body.curClient._id : "none";
 
   try {
-    // Check if task._id exists
+    // Check if the task has an _id (indicating an update)
     if (task._id) {
-      // Update the existing task
-      const result = await User.updateOne(
-        {
-          _id: userId,
-          [`tasks.${task.client ? task.client._id : "none"}._id`]: task._id, // Match the specific task ID within the client's task array
-        },
-        {
-          $set: {
-            [`tasks.${task.client ? task.client._id : "none"}.$`]: { ...updatedValues, _id: task._id }, // Ensure the `_id` field is preserved
-          },
+      // If the client association has changed, move the task
+      if (newClient !== curClient) {
+        // Remove the task from the current client's array
+        await User.updateOne(
+          { _id: userId },
+          { $pull: { [`tasks.${curClient}`]: { _id: task._id } } }
+        );
+
+        // Add the task to the new client's array
+        const result = await User.updateOne(
+          { _id: userId },
+          { $push: { [`tasks.${newClient}`]: task } }
+        );
+
+        if (result.modifiedCount > 0) {
+          return response.status(200).send({ message: "Task updated successfully." });
+        } else {
+          return response.status(404).send({ message: "No changes made or task not found." });
         }
-      );
-      if (result.modifiedCount > 0) {
-        response.status(200).send({ message: "Task updated successfully." });
+
       } else {
-        response.status(404).send({ message: "No changes made or task not found." });
+        // If the client hasn't changed, just update the task
+        const result = await User.updateOne(
+          {
+            _id: userId,
+            [`tasks.${curClient}`]: { $elemMatch: { _id: task._id } },
+          },
+          {
+            $set: { [`tasks.${curClient}.$`]: task },
+          }
+        );
+
+        if (result.modifiedCount > 0) {
+          return response.status(200).send({ message: "Task added successfully." });
+        } else {
+          return response.status(404).send({ message: "No changes made or task not found." });
+        }
       }
     } else {
       // Add a new task
@@ -819,13 +842,13 @@ router.post("/add-task", async (request, response) => {
 
       const result = await User.updateOne(
         { _id: userId },
-        { $push: { [`tasks.${task.client ? task.client._id : "none"}`]: enrichedTask } }
+        { $push: { [`tasks.${newClient}`]: enrichedTask } }
       );
 
       if (result.modifiedCount > 0) {
-        response.status(201).send({ message: "Task added successfully.", id: newTaskId });
+        return response.status(201).send({ message: "Task added successfully.", id: newTaskId });
       } else {
-        response.status(404).send({ message: "User not found or no changes made." });
+        return response.status(404).send({ message: "User not found or no changes made." });
       }
     }
   } catch (error) {
@@ -833,6 +856,7 @@ router.post("/add-task", async (request, response) => {
     response.status(500).send({ message: "Internal server error." });
   }
 });
+
 
 
 

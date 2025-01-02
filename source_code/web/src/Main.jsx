@@ -25,6 +25,10 @@ const Main = () => {
   const [currentClient, setCurrentClient] = useState(null);
   const [editingClient, setEditingClient] = useState(false);
 
+  // The current task
+  const [currentTask, setCurrentTask] = useState(null);
+
+
 
   const login = useCallback(
     (token, storeToken) => {
@@ -88,7 +92,7 @@ const Main = () => {
         });
         
         
-        // setCurrentClient(null);
+        setCurrentTask(null);
         // Clear the current task reference
       })
       .catch((error) => {
@@ -102,9 +106,11 @@ const Main = () => {
     // Add to DB using axios
     axios.post(`${SERVER_URL}/add-task`, {
       userId: user.id,
-      task: task
+      task: task,
+      curClient: currentTask?.client ?? task.client
     })
     .then((response) => {
+      
 
       // Success - get the new task id, if the task was added
       const id = response.data.id;
@@ -123,13 +129,30 @@ const Main = () => {
 
       // The task was edited, so update the task in the state
       else {
-        setTasks((prevTasks) => ({
-          ...prevTasks,
-          [client]: prevTasks[client]?.map((t) => (t._id === task._id ? task : t)) ?? [],
-        }));
+        setTasks((prevTasks) => {
+          // Extract current and new client IDs from the task
+          const oldClientId = currentTask?.client ? currentTask.client._id : "none";
+          const newClientId = task.client ? task.client._id : "none";
+        
+          // Remove the task from the old client's tasks
+          const updatedOldClientTasks = prevTasks[oldClientId]?.filter((t) => t._id !== task._id) ?? [];
+        
+          // Add or replace the task in the new client's tasks
+          const updatedNewClientTasks = [
+            ...(prevTasks[newClientId]?.filter((t) => t._id !== task._id) ?? []),
+            task,
+          ];
+        
+          return {
+            ...prevTasks,
+            [oldClientId]: updatedOldClientTasks,
+            [newClientId]: updatedNewClientTasks,
+          };
+        });
         
         
-        // setCurrentClient(client);
+        
+        // setCurrentTask(task);
         // Update the current task reference 
       }
 
@@ -239,17 +262,24 @@ const Main = () => {
 
         // Remove a task
         removeTask={(task) => handleTask(task, true)}
+        setCurrentTask={setCurrentTask}
 
       />
 
       {showAddTask && (
         <AddTask
+
           clients={clients}
-          close={() => setShowAddTask(false)}
+          close={() => {
+            setShowAddTask(false)
+            setEditingClient(false)
+          }}
           handle={(task, del) => {
             handleTask(task, del);
             setShowAddTask(false);
           }}
+          task = {editingClient ? currentTask : null}
+          currentClient = {currentClient}
         />
       )}
 
