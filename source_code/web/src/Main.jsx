@@ -38,6 +38,9 @@ const Main = () => {
   const [currentTask, setCurrentTask] = useState(null);
   const [currentTemplate, setCurrentTemplate] = useState(null);
 
+  // Current document to edit
+  const [currentDocument, setCurrentDocument] = useState(null);
+
 
 
 
@@ -79,6 +82,12 @@ const Main = () => {
       setLoading(false);
     }
   }, [login]);
+
+
+  // Create a new document from a template
+  const createDocument = (template) => {
+    setCurrentDocument(template);
+  }
 
 
   // Add, delete or edit the task
@@ -278,7 +287,7 @@ const Main = () => {
         template._id = id;
 
         // add to the state
-        setTemplates((prevTemplates) => [...prevTemplates, template]);
+        setTemplates((prevTemplates) => [...prevTemplates ?? [], template]);
         
         
       }
@@ -355,6 +364,11 @@ const Main = () => {
         currentTemplate = {currentTemplate}
         setCurrentTemplate = {setCurrentTemplate}
         removeTemplate={(template) => handleTemplate(template, true)}
+
+        // Current document - if we are editing, this is the document to show
+        currentDocument = {currentDocument}
+        createDocument = {createDocument}
+        setCurrentDocument = {setCurrentDocument}
 
 
 

@@ -38,6 +38,11 @@ const MyRouter = (props) => {
               removeTemplate = {props.removeTemplate}
               setCurrentTemplate = {props.setCurrentTemplate}
 
+              // Document editor
+              createDocument = {props.createDocument}
+              currentDocument = {props.currentDocument}
+              setCurrentDocument = {props.setCurrentDocument}
+
 
 
 

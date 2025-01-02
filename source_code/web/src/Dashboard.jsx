@@ -3,8 +3,18 @@ import ClientList from "./ClientList";
 import ClientView from "./ClientView";
 import Tasks from "./Tasks";
 import Templates from "./Templates";
+import DocumentEditor from "./DocumentEditor";
 
 export default function Dashboard(props) {
+
+    if (props.currentDocument)
+        return (
+            <DocumentEditor
+                document={props.currentDocument}
+                onBack={() => props.setCurrentDocument(null)}
+            />
+        )
+
     return (
       <div style={{ display: "flex", height: "100vh" }}>
         {/* Left Panel - ClientList */}
@@ -74,6 +84,7 @@ export default function Dashboard(props) {
               templates={props.templates}
               setShowAddTemplate={props.setShowAddTemplate}
               setCurrentTemplate={props.setCurrentTemplate}
+              createDocument={(template) => props.createDocument(template)}
               removeTemplate={props.removeTemplate}
               onEdit={(template) => {
                 props.setEditingClient(true); // Enable editing mode
