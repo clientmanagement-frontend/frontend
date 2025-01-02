@@ -3,6 +3,9 @@ import axios from "axios";
 import Login from "./Login";
 import { BrowserRouter, useLocation } from "react-router-dom";
 import MyRouter from "./MyRouter.jsx";
+
+// Modals
+import AddTemplate from "./AddTemplate.jsx";
 import AddTask from "./AddTask.jsx";
 import AddClient from "./AddClient.jsx";
 
@@ -15,11 +18,17 @@ const Main = () => {
   const [user, setUser] = useState(null);
   const [clients, setClients] = useState(null);
   const [tasks, setTasks] = useState(null);
+  const [templates, setTemplates] = useState(null);
+
+
+  // Loading page while we get user info
   const [loading, setLoading] = useState(true);
 
   // Modals
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
+  const [showAddTemplate, setShowAddTemplate] = useState(false);
+
 
   // The current client
   const [currentClient, setCurrentClient] = useState(null);
@@ -27,6 +36,8 @@ const Main = () => {
 
   // The current task
   const [currentTask, setCurrentTask] = useState(null);
+  const [currentTemplate, setCurrentTemplate] = useState(null);
+
 
 
 
@@ -48,6 +59,7 @@ const Main = () => {
 
           setClients(response.data.user.clients);   
           setTasks(response.data.user.tasks);
+          setTemplates(response.data.user.templates);
 
           setLoading(false);
         })
@@ -218,6 +230,79 @@ const Main = () => {
   }
 
 
+  // Add delete or edit a template
+  const handleTemplate = (template, del) => {
+
+    if (del) {
+      axios.post(`${SERVER_URL}/delete-template`, {
+        userId: user.id,
+        templateId: template._id,
+      })
+      .then((response) => {
+        setTemplates((prevTemplates) => {
+          prevTemplates.filter((t) => t._id !== template._id)
+        });
+        
+        
+        setCurrentTemplate(null);
+        // Clear the current task reference
+      })
+      .catch((error) => {
+        console.log(error);
+        alert("An error occurred. Please try again.");
+      });
+
+      return;
+    }
+    // Add to DB using axios
+    const formData = new FormData();
+    formData.append('userId', user.id);
+    formData.append('template', JSON.stringify(template));
+    if (template.file) {
+      formData.append('file', template.file);
+    }
+
+    axios.post(`${SERVER_URL}/add-template`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    .then((response) => {
+      
+
+      // Success - get the new template id, if the template was added
+      const id = response.data.id;
+
+      // New: add to the state
+      if (id) {
+        template._id = id;
+
+        // add to the state
+        setTemplates((prevTemplates) => [...prevTemplates, template]);
+        
+        
+      }
+
+      // The task was edited, so update the task in the state
+      else {
+
+        // Update the old state value for this template with the new one
+        setTemplates((prevTemplates) => prevTemplates.map((t) => t._id === template._id ? template : t));
+        
+        // setCurrentTemplate(template);
+        // Update the current template reference
+      }
+
+      
+    })
+    .catch((error) => {
+      console.log(error);
+      alert("An error occurred. Please try again.");
+    });
+
+  }
+
+
   const ScrollToTopOnRouteChange = () => {
     const { pathname } = useLocation();
 
@@ -247,10 +332,12 @@ const Main = () => {
         // Modals
         setShowAddTask={setShowAddTask}
         setShowAddClient={setShowAddClient}
+        setShowAddTemplate={setShowAddTemplate}
 
         // User's clients and tasks
         clients={clients}
         tasks={tasks}
+        templates ={templates}
 
         // Which client we are viewing
         currentClient={currentClient}
@@ -263,6 +350,13 @@ const Main = () => {
         // Remove a task
         removeTask={(task) => handleTask(task, true)}
         setCurrentTask={setCurrentTask}
+
+        // Templates
+        currentTemplate = {currentTemplate}
+        setCurrentTemplate = {setCurrentTemplate}
+        removeTemplate={(template) => handleTemplate(template, true)}
+
+
 
       />
 
@@ -277,6 +371,8 @@ const Main = () => {
           handle={(task, del) => {
             handleTask(task, del);
             setShowAddTask(false);
+            setCurrentTask(null);
+
           }}
           task = {editingClient ? currentTask : null}
           currentClient = {currentClient}
@@ -296,6 +392,25 @@ const Main = () => {
           client = {editingClient ? currentClient : null}
         />
       )}
+
+      {showAddTemplate && (
+        <AddTemplate
+
+          close={() => {
+            setShowAddTemplate(false)
+            setEditingClient(false)
+          }}
+          handle={(template, del) => {
+            handleTemplate(template, del);
+            setShowAddTemplate(false);
+            setCurrentTemplate(null);
+          }}
+          // If editing, provide the current values
+          template = {editingClient ? currentTemplate : null}
+        />
+      )}
+
+
     </BrowserRouter>
   );
 };

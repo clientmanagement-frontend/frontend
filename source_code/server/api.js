@@ -10,11 +10,43 @@
   const bcrypt = require("bcrypt");
   const nodemailer = require('nodemailer');
   const mongoose = require("mongoose"); // Import mongoose
+  let mega
+  const { Storage } = require('megajs')
+  const multer = require('multer');
+  const fs = require('fs');
+
 
   // DB connection
   dbConnect()
+  // Setting up storage configuration
 
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Directory where files are stored
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname); // Naming convention for uploaded files
+    }
+  });
+
+  // Setting up multer with storage configuration
+  const upload = multer({ storage: storage });
+
+
+  // Setup Mega client
+  ;(async function () {
+    mega = new Storage({
+      email: process.env.MEGA_USER,
+      password: process.env.MEGA_PASS,
+      userAgent: 'ExampleApplication/1.0'
+    })
   
+    // Will resolve once the user is logged in
+    // or reject if some error happens
+    await mega.ready
+  }()).catch(error => {
+    console.error(error)
+  })
 
 
   // Change password button on login page, send code, when verified, choose new password
@@ -853,6 +885,168 @@ router.post("/add-task", async (request, response) => {
     }
   } catch (error) {
     console.error("Error updating user tasks:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+// Delete a file
+async function deleteFile(fullPath, fileId) {
+  const folders = fullPath.split('/'); // Split the full path into folder names
+
+  let megaFolder = mega.root; // The folder reference, starting at the root
+
+  for (const folder of folders) {
+
+    for (const dir of megaFolder.children) {
+      if (dir.name === folder && dir.directory) {
+        megaFolder = dir;
+        break; // Break out of the loop once the folder is found
+      }
+
+    }
+
+  }
+  // megaFolder is the directory to delete the file from
+  for (const file of megaFolder.children) {
+    if (file.name.includes(fileId)) {
+      await file.delete();
+      break;
+    }
+  }
+
+  
+
+}
+
+// Mega make folders
+async function uploadFile(fullPath, file, fileName) {
+  const buff = fs.readFileSync(file.path);
+  const folders = fullPath.split('/'); // Split the full path into folder names
+
+  let megaFolder = mega.root; // The folder to insert the file to
+  
+
+  for (const folder of folders) {
+
+    let exists = false;
+
+    for (const dir of megaFolder.children) {
+      if (dir.name === folder && dir.directory) {
+        megaFolder = dir;
+        exists = true;
+        break; // Break out of the loop once the folder is found
+      }
+
+    }
+
+    // If the folder doesn't exist, create it
+    if (!exists) {
+      megaFolder = await megaFolder.mkdir(folder);
+    }
+
+  }
+
+  // megaFolder is the directory to add the file to
+   // Upload compressed file to mega
+   await megaFolder.upload({ name: fileName }, buff).complete;
+  
+   //lean up local temp files
+   fs.unlinkSync(file.path);
+
+}
+
+
+
+
+// Add a new template (or edit)
+router.post("/add-template", upload.single('file'), async (request, response) => {
+  const userId = request.body.userId;
+  const template = JSON.parse(request.body.template);
+  const file = request.file
+  try {
+
+    // Check if the task has an _id (indicating an update)
+    if (template._id) {
+
+      const result = await User.updateOne(
+        {
+          _id: userId,
+          templates: { $elemMatch: { _id: template._id } },
+        },
+        {
+          $set: { 'templates.$': template },
+        }
+      );
+      
+      
+
+      if (result.matchedCount > 0) {
+        if (file)
+        {
+          // Delete the old file from mega.nz, which is located at userId/templates/templateId.pdf
+          deleteFile(`${userId}/templates`, template._id)
+          uploadFile(`${userId}/templates`, file, `${template._id}.pdf`);
+
+        }
+        
+
+        return response.status(200).send({ message: "Template added successfully." });
+      } else {
+        return response.status(404).send({ message: "Doc not found." });
+      }
+      
+    } else {
+      // Add a new template
+      const newTemplateId = new mongoose.Types.ObjectId();
+
+      // Add an `_id` field to the task object
+      const enrichedTemplate = {
+        ...template,
+        _id: newTemplateId,
+      };
+
+      const result = await User.updateOne(
+        { _id: userId },
+        { $push: { 'templates': enrichedTemplate } }
+      );
+
+      if (result.matchedCount > 0) {
+        
+        uploadFile(`${userId}/templates`, file, `${newTemplateId}.pdf`);
+
+
+        return response.status(201).send({ message: "Template added successfully.", id: newTemplateId });
+      } else {
+        return response.status(404).send({ message: "Doc not found" });
+      }
+    }
+  } catch (error) {
+    console.error("Error updating user tasks:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+
+// Delete template (deletes the file from mega.nz)
+// Delete a client
+router.post("/delete-template", async (request, response) => {
+  const userId = request.body.userId;
+  const templateId = request.body.templateId;
+  try {
+    const result = await User.updateOne(
+      { _id: userId },
+      { $pull: { templates: { _id: templateId } } }
+    );
+    
+    if (result.modifiedCount > 0) {
+
+      // Delete the file from mega.nz, which is located at userId/templates/templateId.pdf
+      deleteFile(`${userId}/templates`, templateId)
+      response.status(200).send({ message: "Template deleted successfully." });
+    }
+    else {
+      response.status(404).send({ message: "Template not found or no changes made." });
+    }
+  } catch (error) {
+    console.error("Error deleting user template:", error);
     response.status(500).send({ message: "Internal server error." });
   }
 });

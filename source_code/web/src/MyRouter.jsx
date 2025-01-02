@@ -20,6 +20,7 @@ const MyRouter = (props) => {
             <Dashboard 
               clients = {props.clients}
               tasks = {props.tasks}
+              templates = {props.templates}
 
               setShowAddTask = {props.setShowAddTask}
               setShowAddClient = {props.setShowAddClient}
@@ -32,6 +33,11 @@ const MyRouter = (props) => {
 
               removeTask = {props.removeTask}
               setCurrentTask = {props.setCurrentTask}
+
+              setShowAddTemplate = {props.setShowAddTemplate}
+              removeTemplate = {props.removeTemplate}
+              setCurrentTemplate = {props.setCurrentTemplate}
+
 
 
 

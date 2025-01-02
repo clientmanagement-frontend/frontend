@@ -2,6 +2,7 @@ import React from "react";
 import ClientList from "./ClientList";
 import ClientView from "./ClientView";
 import Tasks from "./Tasks";
+import Templates from "./Templates";
 
 export default function Dashboard(props) {
     return (
@@ -55,7 +56,7 @@ export default function Dashboard(props) {
   
         {/* Main Content */}
         {!props.currentClient && (
-          <div style={{ flex: 1, padding: "10px" }}>
+          <div style={{ flex: 1, padding: "10px", gap: 20   , display: "flex", flexDirection: "column" }}>
             <Tasks
               title="My Tasks"
               tasks={props.tasks}
@@ -65,6 +66,19 @@ export default function Dashboard(props) {
                 props.setEditingClient(true); // Enable editing mode
                 props.setCurrentTask(task);
                 props.setShowAddTask(true); // Open the modal
+              }}
+            />
+
+            <Templates
+              title="My Templates"
+              templates={props.templates}
+              setShowAddTemplate={props.setShowAddTemplate}
+              setCurrentTemplate={props.setCurrentTemplate}
+              removeTemplate={props.removeTemplate}
+              onEdit={(template) => {
+                props.setEditingClient(true); // Enable editing mode
+                props.setCurrentTemplate(template);
+                props.setShowAddTemplate(true); // Open the modal
               }}
             />
           </div>
