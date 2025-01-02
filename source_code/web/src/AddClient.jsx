@@ -6,6 +6,17 @@ const AddClient = ({ close, add, client }) => {
   const [email, setEmail] = useState(client? client.email : "");
   const [phone, setPhone] = useState(client? client.phone : "");
 
+  // Delete client
+const handleDelete = () => {
+    if (client) {
+        if (window.confirm(`Are you sure you want to delete ${client.name}?`)) {
+            add(client, true);
+        } else {
+            return;
+        }
+    }
+};
+
   const handleSave = () => {
     if (!name) {
       alert("Client name is required.");
@@ -13,10 +24,12 @@ const AddClient = ({ close, add, client }) => {
     }
 
     const newClient = {
-      name,
+      _id: client? client._id : null,
+      name: name,
       address: address,
       email: email,
-      phone: phone
+      phone: phone,
+      points: client? client.points : 0
     };
 
     add(newClient);
@@ -32,7 +45,7 @@ const AddClient = ({ close, add, client }) => {
       <div className="modal-dialog modal-dialog-centered" role="document">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Add New Client</h5>
+            <h5 className="modal-title">{client?._id ? "Edit Client" : "Add New Client"}</h5>
             <button
               type="button"
               className="btn-close"
@@ -98,12 +111,24 @@ const AddClient = ({ close, add, client }) => {
             </form>
           </div>
           <div className="modal-footer">
-            <button className="btn btn-secondary" onClick={close}>
-              Cancel
-            </button>
-            <button className="btn btn-primary" onClick={handleSave}>
-              Save Client
-            </button>
+
+            <div style = {{display: "flex", justifyContent: client ? "space-between" : "right", flex: 1}}>
+                
+                <button style = {{display: client ? "block" : "none"}}className="btn btn-danger" onClick={handleDelete}>
+                    Delete Client
+                </button>
+
+                <div style = {{display: "flex", gap: 10}}>
+                    <button className="btn btn-secondary" onClick={close}>
+                    Cancel
+                    </button>
+                    <button className="btn btn-primary" onClick={handleSave}>
+                    Save Client
+                    </button>
+                </div>
+
+            </div>
+
           </div>
         </div>
       </div>

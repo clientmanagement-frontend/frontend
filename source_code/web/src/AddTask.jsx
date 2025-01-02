@@ -1,10 +1,26 @@
 import React, { useState } from "react";
 
-const AddTask = ({ clients, close, add }) => {
+const AddTask = ({ clients, close, handle, task }) => {
+  const getDefaultDueDate = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 2);
+    return date.toISOString().split("T")[0]; // Format as `YYYY-MM-DD` for `<input type="date">`
+  };
+
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(getDefaultDueDate());
   const [selectedClient, setSelectedClient] = useState(null);
+
+  const handleDelete = () => {
+    if (task) {
+      if (window.confirm(`Are you sure you want to delete ${task.name}?`)) {
+        handle(task, true);
+      } else {
+        return;
+      }
+    }
+  };
 
   const handleSave = () => {
     if (!taskName || !dueDate) {
@@ -13,13 +29,14 @@ const AddTask = ({ clients, close, add }) => {
     }
 
     const newTask = {
+      _id: task ? task._id : null,
       name: taskName,
-      description,
+      description: description,
       due: new Date(dueDate).toISOString(),
-      client: selectedClient ? selectedClient.name : "No Client",
+      client: selectedClient, // Entire client object
     };
 
-    add(newTask);
+    handle(newTask);
   };
 
   return (
@@ -32,7 +49,9 @@ const AddTask = ({ clients, close, add }) => {
       <div className="modal-dialog modal-dialog-centered" role="document">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Add New Task</h5>
+            <h5 className="modal-title">
+              {task?._id ? "Edit Task" : "Add New Task"}
+            </h5>
             <button
               type="button"
               className="btn-close"
@@ -107,12 +126,30 @@ const AddTask = ({ clients, close, add }) => {
             </form>
           </div>
           <div className="modal-footer">
-            <button className="btn btn-secondary" onClick={close}>
-              Cancel
-            </button>
-            <button className="btn btn-primary" onClick={handleSave}>
-              Save Task
-            </button>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: task ? "space-between" : "right",
+                flex: 1,
+              }}
+            >
+              <button
+                style={{ display: task ? "block" : "none" }}
+                className="btn btn-danger"
+                onClick={handleDelete}
+              >
+                Delete Task
+              </button>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button className="btn btn-secondary" onClick={close}>
+                  Cancel
+                </button>
+                <button className="btn btn-primary" onClick={handleSave}>
+                  Save Task
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

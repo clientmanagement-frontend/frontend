@@ -1,21 +1,24 @@
 import React from "react";
-import Task from "./Task"; // Assuming Task component exists
+import Task from "./Task"; 
 
 const Tasks = (props) => {
+
+    let tasks = Object.values(props.tasks).flat()
     
-
-    // const handleAddTask = () => {
-    //     setTasks([...tasks, newTask]);
-    //     setModalOpen(false);
-    // };
-
     return (
         <div>
-            <div style = {{display: "flex"}}>
-                <h3>My Tasks</h3>
-                <button onClick={() => props.setShowAddTask(true)}>+</button>
+            <div style = {{display: "flex", alignItems: "center", gap: 10}}>
+                <h3 style = {{margin: 0}}>My Tasks</h3>
+                <img
+                    src={`add-button.png`}
+                    alt="New Task"
+                    style = {{cursor: "pointer", width: "25px", height: "25px"}}
+                    onClick={() => {
+                        props.setShowAddTask(true)
+                    }}
+                    />
             </div>
-
+            {tasks.length >= 0    && (
             <div
                 style={{
                     display: "flex",
@@ -26,7 +29,7 @@ const Tasks = (props) => {
                     scrollSnapType: "x mandatory",
                 }}
             >
-                {props.tasks.map((task, index) => (
+                {tasks.map((task, index) => (
                     <div
                         key={index}
                         style={{
@@ -40,6 +43,7 @@ const Tasks = (props) => {
                     </div>
                 ))}
             </div>
+            )}
         </div>
 
     );

@@ -1,7 +1,28 @@
 const mongoose = require("mongoose");
 const uniqueValidator = require('mongoose-unique-validator');
 
+const clientSchema = new mongoose.Schema({
+    _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+    name: { type: String, required: true },
+    address: { type: String },
+    phone: { type: String },
+    email: { type: String },
+    points: { type: Number, default: 0 },
+  });
+
+const taskSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    due: { type: Date},
+    description: { type: String},
+    client: {type: Object}
+});
+
 const UserSchema = new mongoose.Schema({
+tasks: {
+    type: Map,
+    of: [taskSchema],
+    default: {},
+    },
 
 company: {
     type: String,
@@ -80,9 +101,8 @@ requests: {
 devices: {
     type: Array
 },
-clients: {
-    type: Array
-}
+
+clients: [clientSchema],
 
 }, {strict: false});
 

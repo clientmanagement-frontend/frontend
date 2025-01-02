@@ -46,7 +46,7 @@ export default function Task({ task, onDone }) {
         </div>
         {task.client && (
           <p style={{ margin: "5px 0", fontSize: "14px" }}>
-            Client: {task.client}
+            Client: {task.client.name}
           </p>
         )}
         <p style={{ margin: "5px 0", fontSize: "14px" }}>{task.description}</p>

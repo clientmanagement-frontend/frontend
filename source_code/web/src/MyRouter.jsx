@@ -24,16 +24,15 @@ const MyRouter = (props) => {
               setShowAddTask = {props.setShowAddTask}
               setShowAddClient = {props.setShowAddClient}
 
-              removeTask = {props.removeTask}
-              removeClient = {props.removeClient}
-
               currentClient = {props.currentClient}
               setCurrentClient = {props.setCurrentClient}
 
               editingClient = {props.editingClient}
               setEditingClient = {props.setEditingClient}
 
-              
+              removeTask = {props.removeTask}
+
+
 
             />} />
           <Route path="account" element={<Account host = {props.host}/>} />

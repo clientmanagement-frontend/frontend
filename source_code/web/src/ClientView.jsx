@@ -13,7 +13,6 @@ const ClientView = ({ client, onBack, onEdit }) => {
                     <h2 
                         onClick={() => onEdit(client)}
                         style={{
-                        padding: "10px",
                         borderBottom: "1px solid #eee",
                         cursor: "pointer",
                         transition: "font-weight 0.2s",
@@ -23,7 +22,7 @@ const ClientView = ({ client, onBack, onEdit }) => {
                         onMouseLeave={(e) => (e.currentTarget.style.fontWeight = 100)}>
 
                     {client.name}</h2>
-                    
+
                 </div>
             </div>
 

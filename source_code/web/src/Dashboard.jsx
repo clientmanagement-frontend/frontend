@@ -14,7 +14,6 @@ export default function Dashboard(props) {
             clients={props.clients} 
             onClientClick={(client) => props.setCurrentClient(client)}
 
-            delClient={(client) => props.removeClient(client)}
             addClient={() => props.setShowAddClient(true)}
 
             
@@ -25,7 +24,6 @@ export default function Dashboard(props) {
       {props.currentClient && (
         <ClientView
             client={props.currentClient}
-            removeClient = {props.removeClient}
             onBack={() => props.setCurrentClient(null)}  
             onEdit={() => {
                 props.setEditingClient(true) // Enable editing mode
@@ -33,6 +31,7 @@ export default function Dashboard(props) {
             }}
         />
       )}
+
 
 
       {/* Main Content */}
@@ -44,9 +43,7 @@ export default function Dashboard(props) {
                     clients = {props.clients} 
                     setShowAddTask = {props.setShowAddTask}
                     removeTask = {props.removeTask}
-
-                    
-                    ></Tasks>
+                ></Tasks>
             </div>
         )}
     </div>

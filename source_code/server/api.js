@@ -9,6 +9,7 @@
   var axios = require('axios')
   const bcrypt = require("bcrypt");
   const nodemailer = require('nodemailer');
+  const mongoose = require("mongoose"); // Import mongoose
 
   // DB connection
   dbConnect()
@@ -387,7 +388,8 @@ pingUrl();
         {
 
           response.status(200).send({
-            user: excludeFields(user.toObject()),
+            
+            user: excludeFields(user)._doc,
           });
         }
         else
@@ -677,8 +679,30 @@ pingUrl();
         }
 })
 
+// Delete a client
+router.post("/delete-client", async (request, response) => {
+  const userId = request.body.userId;
+  const clientId = request.body.clientId;
+  try {
+    const result = await User.updateOne(
+      { _id: userId },
+      { $pull: { clients: { _id: clientId } } }
+    );
+    
+    if (result.modifiedCount > 0) {
+      response.status(200).send({ message: "Client deleted successfully." });
+    }
+    else {
+      response.status(404).send({ message: "Client not found or no changes made." });
+    }
+  } catch (error) {
+    console.error("Error deleting user client:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+
 // Add or edit client
-router.post("/addClient", async(request, response) => {
+router.post("/add-client", async (request, response) => {
   const userId = request.body.userId;
   const client = request.body.client;
 
@@ -691,40 +715,122 @@ router.post("/addClient", async(request, response) => {
         {
           $set: {
             "clients.$.name": client.name,
+            "clients.$.phone": client.phone || "",
             "clients.$.address": client.address || "",
             "clients.$.email": client.email || "",
             "clients.$.points": client.points || 0,
           },
         }
       );
-      if (result.nModified > 0) {
-        console.log("Client updated successfully.");
+      if (result.modifiedCount > 0) {
+        response.status(200).send({ message: "Client updated successfully." });
       } else {
-        console.log("No changes made or client not found.");
+        response.status(201).send({ message: "No changes made" });
       }
     } else {
       // Add a new client
+      const newClientId = new mongoose.Types.ObjectId();
       const result = await User.updateOne(
         { _id: userId },
         {
           $push: {
             clients: {
+              _id: newClientId,
               name: client.name,
-              address: client.address || "N/A",
-              email: client.email || "N/A",
+              address: client.address || "",
+              phone: client.phone || "",
+              email: client.email || "",
               points: client.points || 0,
             },
           },
         }
       );
-      if (result.nModified > 0) {
-        console.log("Client added successfully.");
+      if (result.modifiedCount > 0) {
+        response.status(201).send({ message: "Client added successfully.", id: newClientId });
       } else {
-        console.log("User not found or no changes made.");
+        response.status(404).send({ message: "User not found or no changes made." });
       }
     }
   } catch (error) {
     console.error("Error updating user clients:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+
+// Delete a task
+router.post("/delete-task", async (request, response) => {
+  const userId = request.body.userId;
+  const taskId = request.body.taskId;
+  const taskClient = request.body.taskClient;
+
+
+  try {
+    const result = await User.updateOne(
+      { _id: userId },
+      { $pull: { [`tasks.${taskClient}`]: { _id: taskId } } }
+    );
+    
+    if (result.modifiedCount > 0) {
+      response.status(200).send({ message: "Task deleted successfully." });
+    }
+    else {
+      response.status(404).send({ message: "Task not found or no changes made." });
+    }
+  } catch (error) {
+    console.error("Error deleting user task:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+
+// Add or edit task
+router.post("/add-task", async (request, response) => {
+  const userId = request.body.userId;
+  const task = request.body.task;
+
+  try {
+    // Check if task._id exists
+    if (task._id) {
+      // Update the existing task
+      const result = await User.updateOne(
+        {
+          _id: userId,
+          [`tasks.${task.client ? task.client._id : "none"}._id`]: task._id, // Match the specific task ID within the client's task array
+        },
+        {
+          $set: {
+            [`tasks.${task.client ? task.client._id : "none"}.$`]: { ...updatedValues, _id: task._id }, // Ensure the `_id` field is preserved
+          },
+        }
+      );
+      if (result.modifiedCount > 0) {
+        response.status(200).send({ message: "Task updated successfully." });
+      } else {
+        response.status(404).send({ message: "No changes made or task not found." });
+      }
+    } else {
+      // Add a new task
+      const newTaskId = new mongoose.Types.ObjectId();
+
+      // Add an `_id` field to the task object
+      const enrichedTask = {
+        ...task,
+        _id: newTaskId,
+      };
+
+      const result = await User.updateOne(
+        { _id: userId },
+        { $push: { [`tasks.${task.client ? task.client._id : "none"}`]: enrichedTask } }
+      );
+
+      if (result.modifiedCount > 0) {
+        response.status(201).send({ message: "Task added successfully.", id: newTaskId });
+      } else {
+        response.status(404).send({ message: "User not found or no changes made." });
+      }
+    }
+  } catch (error) {
+    console.error("Error updating user tasks:", error);
+    response.status(500).send({ message: "Internal server error." });
   }
 });
 
