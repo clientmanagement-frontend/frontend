@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, {  useState } from "react";
 import BackButton from "./BackButton";
 
-const DocumentEditor = ({ document, onBack, saveDoc }) => {
-  const [fields, setFields] = useState(document.fields || {});
+const DocumentEditor = ({ doc, onBack, saveDoc }) => {
+  const [fields, setFields] = useState(doc.fields || {});
   const [documentName, setDocumentName] = useState(
-    document.name || "New Document"
+    doc.name || "New Document"
   );
+
+  const pdfBlob = new Blob([doc.data], { type: "application/pdf" });
+  const pdfURL = URL.createObjectURL(pdfBlob);
 
 
 
@@ -16,32 +19,58 @@ const DocumentEditor = ({ document, onBack, saveDoc }) => {
 
   // Save the document
   const saveDocument = async () => {
-    const updatedDocument = {
-      _id: document._id,
-      name: documentName,
-      fields: fields,
-      templateId: document.templateId,
-    };
-
-    saveDoc(updatedDocument);
+    try {
+        const iframe = document.querySelector("iframe");
+        const iframeWindow = iframe.contentWindow || iframe.contentDocument.defaultView;
+    
+        // Ensure the PDF Viewer is loaded
+        if (!iframeWindow || !iframeWindow.PDFViewerApplication) {
+          throw new Error("PDF Viewer is not loaded or accessible.");
+        }
+    
+        // Get the modified PDF document
+        const pdfDocument = iframeWindow.PDFViewerApplication.pdfDocument;
+        if (!pdfDocument) {
+          throw new Error("No PDF document is loaded in the viewer.");
+        }
+    
+        // Save the modified document (includes changes made in the viewer)
+        // const modifiedPdfBlob = await iframeWindow.PDFViewerApplication.save();
+    
+        // // Convert Blob to Uint8Array
+        // const pdfArrayBuffer = await modifiedPdfBlob.arrayBuffer();
+        const pdfArrayBuffer = await pdfDocument.getData();
+    
+        // Prepare the data for the server
+        const updatedDocument = {
+          _id: doc._id,
+          name: documentName,
+          fields: fields,
+          templateId: doc.templateId,
+          data: Array.from(new Uint8Array(pdfArrayBuffer)), // Convert to Array for sending
+        };
+  
+      // Save the document to the server
+      saveDoc(updatedDocument);
+    } catch (error) {
+      console.error("Error saving document:", error);
+    }
   };
+  
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       <BackButton onClick={onBack} />
       {/* Left: PDF Viewer */}
       <div style={{ flex: 2, padding: "10px", borderRight: "1px solid #ccc" }}>
-        {document.data && (
+        {doc.data && (
+          
+
           <iframe
-            title="Document Viewer"
-            src={`data:application/pdf;base64,${btoa(
-              new Uint8Array(document.data).reduce(
-                (data, byte) => data + String.fromCharCode(byte),
-                ""
-              )
-            )}`}
-            style={{ width: "100%", height: "100%", border: "none" }}
-          ></iframe>
+      title="PDF Viewer"
+      src={`/pdfjs/web/viewer.html?file=${encodeURIComponent(pdfURL)}`}
+      style={{ width: "100%", height: "100%", border: "none" }}
+    ></iframe>
         )}
       </div>
 

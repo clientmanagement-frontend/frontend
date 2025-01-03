@@ -949,7 +949,11 @@ async function downloadFile(fullPath, fileId) {
 
 // Mega make folders
 async function uploadFile(fullPath, file, fileName) {
-  const buff = fs.readFileSync(file.path);
+  if (file?.path)
+    buff = fs.readFileSync(file.path);
+  else
+    buff = file
+
   const folders = fullPath.split('/'); // Split the full path into folder names
 
   let megaFolder = mega.root; // The folder to insert the file to
@@ -980,42 +984,47 @@ async function uploadFile(fullPath, file, fileName) {
    await megaFolder.upload({ name: fileName }, buff).complete;
   
    //lean up local temp files
+   if (file?.path)
    fs.unlinkSync(file.path);
 
 }
 
-// Save PDF 
-router.post('/save-document', async (req, res) => {
-
-  // Load template PDF
-  const pdfBytes = await downloadFile(`${req.body.userId}/templates`, req.body.templateId);
-
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-
-  // Replace placeholders
-  for (const page of pdfDoc.getPages()) {
-    const text = page.getTextContent().items.map(item => item.str).join('');
-    for (const [key, value] of Object.entries(req.body.fields)) {
-      const placeholder = `$${key}$`;
-      text.replace(placeholder, value.split('$')[1]); // Only show the value
-    }
-  }
-
-  const pdfBuffer = await pdfDoc.save();
-  await uploadFile(`${req
-    .body.userId}/documents`, pdfBuffer, `${req.body.documentId}.pdf`)
-    
-res.status(200).send({ message: "Document saved successfully." });
-  
-
-});
-
-// Download template file
+// Download template file, when creating a new document
+// need to remove the keys from the document, we already extracted them
 router.get("/download-template", async (request, response) => {
   const userId = request.query.userId;
   const templateId = request.query.templateId;
   try {
         const file = await downloadFile(`${userId}/templates`, templateId);
+        // const data = await pdf(buff);
+
+        // // Regular expression to match $key$ patterns
+        // const regex = /\$([a-zA-Z0-9_]+)\$/g;
+    
+        // // Replace all occurrences of $key$ with an empty string
+        // const modifiedText = data.text.replace(regex, "");
+    
+        // // Load the original PDF
+        // const pdfDoc = await PDFDocument.load(buff);
+    
+        // // Update each page of the PDF with modified content
+        // const pages = pdfDoc.getPages();
+        // for (let i = 0; i < pages.length; i++) {
+        //     const page = pages[i];
+        //     // Clear existing content and replace with the modified text
+        //     page.drawText(modifiedText, {
+        //         x: 50,
+        //         y: page.getHeight() - 50,
+        //         size: 12,
+
+        //     });
+        // }
+    
+        // // Save the modified PDF
+        // const file = await pdfDoc.save();
+        // fs.writeFileSync('temp.pdf', file);
+
+
         response.setHeader('Content-Type', 'application/pdf');
         response.setHeader('Content-Disposition', `attachment; filename=${templateId}.pdf`);
         response.send(file);
@@ -1027,6 +1036,98 @@ router.get("/download-template", async (request, response) => {
 });
 
 
+// Create (or save) a document from a template
+router.post("/save-document", async (request, response) => {
+  const userId = request.body.userId;
+  const templateId = request.body.templateId;
+  const fields = request.body.fields;
+  const documentId = request.body.documentId;
+  const pdfBuffer = Buffer.from(new Uint8Array(request.body.data));
+  
+  try {
+    // // Load template PDF, to replace the fields with the user's data
+    // const template = await downloadFile(`${userId}/templates`, templateId);
+
+    // const data = await pdf(template);
+
+    // let modifiedText = data.text;
+    // for (const [key, value] of Object.entries(fields)) {
+    //     const regex = new RegExp(`\\$${key}\\$`, "g"); // Match $key$
+    //     modifiedText = modifiedText.replace(regex, value);
+    // }
+
+    // // Load the original PDF
+    // const pdfDoc = await PDFDocument.load(template);
+
+    // // Update each page of the PDF with modified content
+    // const pages = pdfDoc.getPages();
+    // const pageHeight = pages[0].getHeight();
+
+    // for (let i = 0; i < pages.length; i++) {
+    //     const page = pages[i];
+    //     page.drawText(modifiedText, {
+    //         x: 50,
+    //         y: pageHeight - 50,
+    //         size: 12,
+    //         font: await pdfDoc.embedFont(PDFDocument.PDFFont.Helvetica),
+    //     });
+    // }
+
+
+    // Save the modified PDF
+    //const pdfBuffer = await pdfDoc.save();
+    
+
+    // Add document to database user.documents if it doesn't exist (documentId is null) or update it if it does
+    if (documentId) {
+      const result = await User.updateOne(
+        {
+          _id: userId,
+          documents: { $elemMatch: { _id: documentId } },
+        },
+        {
+          $set: { 'documents.$': { _id: documentId, templateId: templateId, fields: fields } },
+        }
+      );
+
+      if (result.matchedCount > 0) {
+        await uploadFile(`${userId}/documents`, pdfBuffer, `${documentId}.pdf`);
+
+        return response.status(200).send({ message: "Document updated successfully." });
+      } else {
+        return response.status(404).send({ message: "Doc not found." });
+      }
+    }
+
+    // Add a new document
+    const newDocumentId = new mongoose.Types.ObjectId();
+
+    // Add an `_id` field to the document object
+    const enrichedDocument = {
+      _id: newDocumentId,
+      templateId: templateId, 
+      fields: fields
+    };
+
+    await User.updateOne(
+      { _id: userId },
+      { $push: { 'documents': enrichedDocument } }
+    );
+
+    fs.writeFileSync('temp.pdf', pdfBuffer);
+
+
+    await uploadFile(`${userId}/documents`, pdfBuffer, `${newDocumentId}.pdf`);
+
+
+    response.status(200).send({ message: "Document added successfully." });
+
+  } catch (error) {
+    console.error("Error creating document:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+
 
 // Add a new template (or edit)
 router.post("/add-template", upload.single('file'), async (request, response) => {
@@ -1035,25 +1136,26 @@ router.post("/add-template", upload.single('file'), async (request, response) =>
   const file = request.file
 
   // Update template fields
+  // Extract fields from the PDF for rendering on frontend
   if (file)
-    {
-      const buff = fs.readFileSync(file.path);
-      const data = await pdf(buff);
+  {
+    const buff = fs.readFileSync(file.path);
+    const data = await pdf(buff);
 
-      const regex = /\$([a-zA-Z0-9_]+)\$([^\$]*)/g;
-      let fields = {};
-      let match;
+    const regex = /\$([a-zA-Z0-9_]+)\$([^\$]*)/g;
+    let fields = {};
+    let match;
 
-      while ((match = regex.exec(data.text)) !== null) {
-          const key = match[1];
-          const value = match[2] ? match[2] : "";
-          // Include the value if it is not a newline or whitespace
-          fields[key] = value.charAt(0) === '\n' ? "" : value;
-      }
-
-      template.fields = fields
-
+    while ((match = regex.exec(data.text)) !== null) {
+        const key = match[1];
+        const value = match[2] ? match[2] : "";
+        // Include the value if it is not a newline or whitespace
+        fields[key] = value.charAt(0) === '\n' ? "" : value;
     }
+
+    template.fields = fields
+
+  }
   
   try {
 

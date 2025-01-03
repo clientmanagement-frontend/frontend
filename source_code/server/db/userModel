@@ -24,6 +24,10 @@ const templateSchema = new mongoose.Schema({
 });
 
 const UserSchema = new mongoose.Schema({
+documents: {
+    type: Array,
+    default: []
+},
 templates: [templateSchema],
 tasks: {
     type: Map,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import Login from "./Login";
-import { BrowserRouter, useLocation } from "react-router-dom";
+import { BrowserRouter,  useLocation } from "react-router-dom";
 import MyRouter from "./MyRouter.jsx";
 
 // Modals
@@ -87,9 +87,10 @@ const Main = () => {
   const saveDoc = async (doc) => {
     const formData = {
       userId: user.id,
-      templateId: doc.template._id,
+      templateId: doc.templateId,
       fields: doc.fields,
       documentId: doc.documentId,
+      data: doc.data,
     }
 
     axios.post(`${SERVER_URL}/save-document`, formData)

@@ -10,7 +10,7 @@ export default function Dashboard(props) {
     if (props.currentDocument)
         return (
             <DocumentEditor
-                document={props.currentDocument}
+                doc={props.currentDocument}
                 onBack={() => props.setCurrentDocument(null)}
                 user = {props.user}
                 saveDoc = {props.saveDoc}
