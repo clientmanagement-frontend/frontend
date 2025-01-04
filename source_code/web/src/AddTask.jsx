@@ -9,7 +9,12 @@ const AddTask = ({ clients, close, handle, task, currentClient }) => {
 
   const [taskName, setTaskName] = useState(task ? task.name : "");
   const [description, setDescription] = useState(task ? task.description : "");
-  const [dueDate, setDueDate] = useState(task ? task.due.split("T")[0] : getDefaultDueDate());
+  const [dueDate, setDueDate] = useState(
+    task && task.due 
+      ? (typeof task.due === "string" ? task.due : task.due.toISOString().split("T")[0]) 
+      : getDefaultDueDate()
+  );
+  
   const [selectedClient, setSelectedClient] = useState(currentClient ?? (task ? task.client : null));
 
   const handleDelete = () => {

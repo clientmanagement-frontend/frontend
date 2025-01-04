@@ -14,7 +14,9 @@ const taskSchema = new mongoose.Schema({
     name: { type: String, required: true },
     due: { type: Date},
     description: { type: String},
-    client: {type: Object}
+    client: {type: Object},
+    doclink: {type: String},
+    type: { type: String},
 });
 
 const templateSchema = new mongoose.Schema({

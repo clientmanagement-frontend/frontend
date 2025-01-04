@@ -12,6 +12,7 @@ const Nav = props => {
                     
                     <ul class="navbar">
                         <li><NavLink to = "/">Dashboard</NavLink></li>
+                        <li><NavLink to = "/documents">Documents</NavLink></li>
                         <li><NavLink to = "/contact">Help</NavLink></li>
                         <li><NavLink to = "/account">Account</NavLink></li>
                     </ul>

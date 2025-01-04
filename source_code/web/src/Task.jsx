@@ -1,6 +1,8 @@
 import React from "react";
 
-export default function Task({ task, onDone, onEdit }) {
+export default function Task({ task, onDone, onEdit, onDoclink, isDashboard }) {
+    // enable doclink if we have a doclink, or, if we don't have a doclink, we have a client who is not the current client
+
   const calculateDueDate = (due) => {
     const currentDate = new Date();
     const dueDate = new Date(due);
@@ -52,23 +54,59 @@ export default function Task({ task, onDone, onEdit }) {
         )}
         <p style={{ margin: "5px 0", fontSize: "14px" }}>{task.description}</p>
       </div>
-      <button
-        style={{
-          position: "absolute",
+
+      <div style = {{display: "flex", justifyContent: "flex-end", gap: 5, position: "absolute",
           bottom: "10px",
-          right: "10px",
-          backgroundColor: "#007bff",
-          color: "#fff",
-          border: "none",
-          borderRadius: "20px",
-          padding: "5px 15px",
-          cursor: "pointer",
-          fontSize: "14px",
-        }}
-        onClick={(e) => {onDone(task); e.stopPropagation();}}
-      >
-        Done
-      </button>
+          right: "10px",}}>
+
+        {task.doclink && (
+        <button
+            style={{
+            
+            backgroundColor: "#aaa",
+            color: "#fff",
+            border: "none",
+            borderRadius: "20px",
+            padding: "5px 15px",
+            cursor: "pointer",
+            fontSize: "14px",
+            }}
+            onClick={(e) => {task.type === "send" ? onDone({...task, type: ""}) : onDone(task); e.stopPropagation();}}
+
+            
+        >
+            Dismiss
+        </button>
+        )}
+        
+        <button
+            style={{
+            
+            backgroundColor: "#007bff",
+            color: "#fff",
+            border: "none",
+            borderRadius: "20px",
+            padding: "5px 15px",
+            cursor: "pointer",
+            fontSize: "14px",
+            }}
+            onClick={(e) => {
+            !task.doclink? onDone(task) :
+                task.type === "send" ?  onDone(task): onDoclink(task); 
+                e.stopPropagation();}}
+        >
+            {task.doclink? ( 
+                task.type === "send" ? "Send" : 
+                task.type === "complete" ? "Continue" 
+                : "Finish") 
+            
+            // No doclink, standard task
+            : "Done"}
+
+        </button>
+
+
+      </div>
     </div>
   );
 }

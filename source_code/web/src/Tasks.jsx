@@ -50,9 +50,10 @@ const Tasks = (props) => {
                                 window.innerWidth / 400
                             )})`,
                             scrollSnapAlign: "start",
+                            maxWidth: "400px"
                         }}
                     >
-                        <Task task={task} onDone={(task) => props.removeTask(task)} onEdit={(task) => props.onEdit(task)}/>
+                        <Task task={task} onDone={props.onDone} onEdit={props.onEdit} onDoclink={props.onDoclink} isDashboard={props.isDashboard}/>
                     </div>
                 ))}
             </div>

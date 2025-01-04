@@ -1,7 +1,6 @@
-import React, { useState } from "react";
 
-const ClientList = ({ clients, onClientClick, addClient }) => {
-  const [search, setSearch] = useState("");
+
+const ClientList = ({ clients, onClientClick, addClient, search, setSearch }) => {
 
   const filteredClients = clients ? clients.filter((client) =>
     client.name.toLowerCase().includes(search.toLowerCase())

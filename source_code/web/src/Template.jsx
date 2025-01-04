@@ -1,11 +1,11 @@
 import React from "react";
 
-export default function Template({ template, onCreate, onEdit }) {
+export default function Template({ template, onCreate, onBrowse }) {
 
   if(template)
   return (
     <div
-        onClick={() => onEdit(template)}
+        onClick={() => onBrowse(template)}
       style={{
         backgroundColor: "#f9f9f9",
         border: "1px solid #ddd",
@@ -35,23 +35,25 @@ export default function Template({ template, onCreate, onEdit }) {
         </div>
         <p style={{ margin: "5px 0", fontSize: "14px" }}>{template.description}</p>
       </div>
-      <button
-        style={{
-          position: "absolute",
-          bottom: "10px",
-          right: "10px",
-          backgroundColor: "#007bff",
-          color: "#fff",
-          border: "none",
-          borderRadius: "20px",
-          padding: "5px 15px",
-          cursor: "pointer",
-          fontSize: "14px",
-        }}
-        onClick={(e) => {onCreate(template); e.stopPropagation();}}
-      >
-        Create
-      </button>
+      <div style = {{display: "flex", justifyContent: "flex-end", flex: 1, position: "absolute",
+            bottom: "10px",
+            right: "10px", gap: 5}}>
+      
+        <button
+          style={{
+            backgroundColor: "#007bff",
+            color: "#fff",
+            border: "none",
+            borderRadius: "20px",
+            padding: "5px 15px",
+            cursor: "pointer",
+            fontSize: "14px",
+          }}
+          onClick={(e) => {onCreate(template); e.stopPropagation();}}
+        >
+          Create
+        </button>
+      </div>
     </div>
   );
 }

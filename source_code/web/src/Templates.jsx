@@ -1,7 +1,9 @@
 import React from "react";
 import Template from "./Template"; 
+import { useNavigate } from "react-router-dom";
 
 const Templates = (props) => {
+    const navigate = useNavigate();
 
     let templates = props.templates
 
@@ -41,9 +43,10 @@ const Templates = (props) => {
                                 window.innerWidth / 400
                             )})`,
                             scrollSnapAlign: "start",
+                            maxWidth: "400px"
                         }}
                     >
-                        <Template template={template} onCreate={(template) => props.createDocument(template)} onEdit={(template) => props.onEdit(template)}/>
+                        <Template template={template} onCreate={(template) => {navigate('/documents'); props.createDocument(template)}} onEdit={(template) => props.onEdit(template) } onBrowse={(template) => props.onBrowse(template)}/>
                     </div>
                 ))}
             </div>

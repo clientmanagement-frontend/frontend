@@ -720,7 +720,7 @@ router.post("/delete-client", async (request, response) => {
   try {
     const result = await User.updateOne(
       { _id: userId },
-      { $pull: { clients: { _id: clientId } } }
+      { $pull: { clients: { _id: new mongoose.Types.ObjectId(clientId) } } }
     );
     
     if (result.modifiedCount > 0) {
@@ -763,7 +763,7 @@ router.post("/add-client", async (request, response) => {
       }
     } else {
       // Add a new client
-      const newClientId = new mongoose.Types.ObjectId();
+      const newClientId = new mongoose.Types.ObjectId().toString();
       const result = await User.updateOne(
         { _id: userId },
         {
@@ -825,7 +825,7 @@ router.post("/add-task", async (request, response) => {
 
   try {
     // Check if the task has an _id (indicating an update)
-    if (task._id) {
+    if (!(!task._id && task.doclink) && task._id) {
       // If the client association has changed, move the task
       if (newClient !== curClient) {
         // Remove the task from the current client's array
@@ -866,12 +866,12 @@ router.post("/add-task", async (request, response) => {
       }
     } else {
       // Add a new task
-      const newTaskId = new mongoose.Types.ObjectId();
+      const newId = new mongoose.Types.ObjectId().toString();
 
       // Add an `_id` field to the task object
       const enrichedTask = {
         ...task,
-        _id: newTaskId,
+        _id: newId,
       };
 
       const result = await User.updateOne(
@@ -880,7 +880,7 @@ router.post("/add-task", async (request, response) => {
       );
 
       if (result.modifiedCount > 0) {
-        return response.status(201).send({ message: "Task added successfully.", id: newTaskId });
+        return response.status(201).send({ message: "Task added successfully.", id: newId });
       } else {
         return response.status(404).send({ message: "User not found or no changes made." });
       }
@@ -981,7 +981,13 @@ async function uploadFile(fullPath, file, fileName) {
 
   // megaFolder is the directory to add the file to
    // Upload compressed file to mega
-   await megaFolder.upload({ name: fileName }, buff).complete;
+   try {
+    const result = await megaFolder.upload({ name: fileName }, buff).complete;
+  }
+  catch (e)
+  {
+    console.log(e)
+  }
   
    //lean up local temp files
    if (file?.path)
@@ -990,12 +996,13 @@ async function uploadFile(fullPath, file, fileName) {
 }
 
 // Download template file, when creating a new document
+// Now it has been generalized to download any file
 // need to remove the keys from the document, we already extracted them
-router.get("/download-template", async (request, response) => {
-  const userId = request.query.userId;
-  const templateId = request.query.templateId;
+router.get("/download-file", async (request, response) => {
+  const path = request.query.path;
+  const fileId = request.query.fileId;
   try {
-        const file = await downloadFile(`${userId}/templates`, templateId);
+        const file = await downloadFile(path, fileId);
         // const data = await pdf(buff);
 
         // // Regular expression to match $key$ patterns
@@ -1026,11 +1033,35 @@ router.get("/download-template", async (request, response) => {
 
 
         response.setHeader('Content-Type', 'application/pdf');
-        response.setHeader('Content-Disposition', `attachment; filename=${templateId}.pdf`);
+        response.setHeader('Content-Disposition', `attachment; filename=${fileId}.pdf`);
         response.send(file);
       
   } catch (error) {
-    console.error("Error downloading template:", error);
+    console.error("Error downloading file:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+
+// Delete a document
+router.post("/delete-document", async (request, response) => {
+  const userId = request.body.userId;
+  const documentId = request.body.document._id;
+
+  try {
+    const result = await User.updateOne(
+      { _id: userId },
+      { $pull: { documents: { _id: documentId } } }
+    );
+
+    if (result.modifiedCount > 0) {
+      await deleteFile(`${userId}/documents`, documentId);
+      response.status(200).send({ message: "Document deleted successfully." });
+    }
+    else {
+      response.status(404).send({ message: "Document not found or no changes made." });
+    }
+  } catch (error) {
+    console.error("Error deleting user document:", error);
     response.status(500).send({ message: "Internal server error." });
   }
 });
@@ -1039,10 +1070,12 @@ router.get("/download-template", async (request, response) => {
 // Create (or save) a document from a template
 router.post("/save-document", async (request, response) => {
   const userId = request.body.userId;
-  const templateId = request.body.templateId;
-  const fields = request.body.fields;
-  const documentId = request.body.documentId;
-  const pdfBuffer = Buffer.from(new Uint8Array(request.body.data));
+  let document = request.body.document;
+  const pdfBuffer = Buffer.from(new Uint8Array(document.data));
+
+  delete document.data; // Remove the data field from the document object
+
+
   
   try {
     // // Load template PDF, to replace the fields with the user's data
@@ -1079,39 +1112,36 @@ router.post("/save-document", async (request, response) => {
     
 
     // Add document to database user.documents if it doesn't exist (documentId is null) or update it if it does
-    if (documentId) {
+    if (document._id) {
       const result = await User.updateOne(
         {
           _id: userId,
-          documents: { $elemMatch: { _id: documentId } },
+          documents: { $elemMatch: { _id:  document._id} },
         },
         {
-          $set: { 'documents.$': { _id: documentId, templateId: templateId, fields: fields } },
+          $set: { 'documents.$':  document  },
         }
       );
 
       if (result.matchedCount > 0) {
-        await uploadFile(`${userId}/documents`, pdfBuffer, `${documentId}.pdf`);
+        await deleteFile(`${userId}/documents`, document._id)
+        await uploadFile(`${userId}/documents`, pdfBuffer, `${document._id}.pdf`);
 
-        return response.status(200).send({ message: "Document updated successfully." });
+        return response.status(200).send({ message: "Document updated successfully.", doc: document });
       } else {
         return response.status(404).send({ message: "Doc not found." });
       }
     }
 
     // Add a new document
-    const newDocumentId = new mongoose.Types.ObjectId();
+    const newDocumentId = new mongoose.Types.ObjectId().toString();
 
     // Add an `_id` field to the document object
-    const enrichedDocument = {
-      _id: newDocumentId,
-      templateId: templateId, 
-      fields: fields
-    };
+    document._id = newDocumentId;
 
     await User.updateOne(
       { _id: userId },
-      { $push: { 'documents': enrichedDocument } }
+      { $push: { 'documents': document } }
     );
 
     fs.writeFileSync('temp.pdf', pdfBuffer);
@@ -1120,13 +1150,81 @@ router.post("/save-document", async (request, response) => {
     await uploadFile(`${userId}/documents`, pdfBuffer, `${newDocumentId}.pdf`);
 
 
-    response.status(200).send({ message: "Document added successfully." });
+    response.status(201).send({ message: "Document added successfully.", doc: document });
 
   } catch (error) {
     console.error("Error creating document:", error);
     response.status(500).send({ message: "Internal server error." });
   }
 });
+
+router.post("/send-document", async (request, response) => {
+  const { userId, document, message, allClients } = request.body;
+
+  try {
+    // Download the document
+    const pdfBuffer = await downloadFile(`${userId}/documents`, document._id);
+
+    // Make mail options, if message.client is falsey, send to each .email field in allClients array:
+    const mailOptions = {
+      from: process.env.MAILER_USER,
+      to: message.client ? message.client.email : allClients.map(client => client.email).join(", "),
+      subject: message.subject,
+      text: message.body,
+      attachments: [
+        {
+          filename: `${document.name}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
+    };
+
+
+    // Function to send the email
+    const sendEmail = () => {
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.log("Error sending email:", error);
+          response.status(500).send({ message: "Error sending email." });
+        } else {
+          response.status(200).send({ message: "Email sent successfully." });
+        }
+      });
+    };
+
+    // If message.due is provided and valid, schedule the email
+    if (message.method === "Email") {
+      if (message.due) {
+        const dueTime = new Date(message.due).getTime();
+        const now = Date.now();
+        const delay = dueTime - now;
+
+        if (delay > 0) {
+          console.log(`Scheduling email to be sent in ${delay}ms`);
+          setTimeout(sendEmail, delay);
+          response.status(200).send({ message: "Email scheduled successfully." });
+        } else {
+          console.log("Due time is in the past. Sending immediately.");
+          sendEmail();
+        }
+      } else {
+        // Send immediately if no due time is provided
+        sendEmail();
+      }
+    }
+    else
+    {
+      // Texts handled on frontend for now
+    }
+
+
+  } catch (error) {
+    console.error("Error sending document:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+
+
 
 
 // Add a new template (or edit)
@@ -1191,7 +1289,7 @@ router.post("/add-template", upload.single('file'), async (request, response) =>
       
     } else {
       // Add a new template
-      const newTemplateId = new mongoose.Types.ObjectId();
+      const newTemplateId = new mongoose.Types.ObjectId().toString();
 
       // Add an `_id` field to the task object
       const enrichedTemplate = {
@@ -1225,10 +1323,11 @@ router.post("/add-template", upload.single('file'), async (request, response) =>
 router.post("/delete-template", async (request, response) => {
   const userId = request.body.userId;
   const templateId = request.body.templateId;
+
   try {
     const result = await User.updateOne(
       { _id: userId },
-      { $pull: { templates: { _id: templateId } } }
+      { $pull: { templates: { _id: new mongoose.Types.ObjectId(templateId) } } }
     );
     
     if (result.modifiedCount > 0) {
@@ -1270,6 +1369,7 @@ router.post("/delete-template", async (request, response) => {
       }
     });
   })
+
 
   // register endpoint
   // makes an account
