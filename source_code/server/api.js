@@ -369,24 +369,8 @@ pingUrl();
       })
   })
   
-  // Update special requests
-  // Used to update the database value for a user given id
-  router.post('/updateRequests', (req,res) => {
-    User.findByIdAndUpdate(
-      
-      req.body.user_id,
-      {
-        $set: { requests: req.body.requests }
-      }, {new: true}).then((user) => {
-        console.log(user.email, "updated preferences")
-        res.send('Success')
-      })
-      .catch((e) => {
-        console.log(e)
-        res.status(500).send(e)
-      })
-    
-  })
+  
+
 
   // Load the user when they log in
   // Can we move this to the return of /login? this is unclear!
@@ -442,6 +426,8 @@ pingUrl();
       
       
   })
+
+  
 
   // Change the password
   router.post('/setNewPassword', async(req,res) => {
@@ -890,6 +876,38 @@ router.post("/add-task", async (request, response) => {
     response.status(500).send({ message: "Internal server error." });
   }
 });
+
+// Update user settings (user.settings) in the databse
+router.post('/save-settings', (req, res) => {
+  User.findByIdAndUpdate(
+    req.body.userId,
+    {
+      $set: { settings: req.body.settings }
+    }, {new: true}).then((user) => {
+      if (user)
+      {
+        res.status(200).send({
+          message: "Settings updated successfully",
+        });
+      }
+      else
+      {
+        res.status(404).send({
+          message: "User not found!",
+        });
+      }
+    })
+    .catch((e) => {
+      res.status(500).send({
+        message: e,
+      });
+    }
+  )
+})
+
+
+
+
 // Delete a file
 async function deleteFile(fullPath, fileId) {
   const folders = fullPath.split('/'); // Split the full path into folder names

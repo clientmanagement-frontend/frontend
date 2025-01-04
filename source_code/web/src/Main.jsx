@@ -20,6 +20,7 @@ const Main = () => {
 
   // Details about the user
   const [user, setUser] = useState(null);
+  const [settings, setSettings] = useState(null);
   const [clients, setClients] = useState(null);
   const [tasks, setTasks] = useState(null);
   const [templates, setTemplates] = useState(null);
@@ -93,6 +94,7 @@ const Main = () => {
           setTasks(response.data.user.tasks);
           setTemplates(response.data.user.templates);
           setDocuments(response.data.user.documents);
+          setSettings(response.data.user.settings);
 
           setNotes(response.data.user.notes); // For performance, we can get notes for a client when we click on the client
 
@@ -698,6 +700,46 @@ const addNote = (note) => {
     return null;
   };
 
+  
+
+
+
+// Update a setting
+const updateSetting = (setting, value) => {
+  const keys = setting.split('.');
+  let updatedSettings = { ...settings };
+
+  keys.reduce((acc, currentKey, index) => {
+    if (index === keys.length - 1) {
+      acc[currentKey] = value;
+    } else {
+      acc[currentKey] = acc[currentKey] || {};
+    }
+    return acc[currentKey];
+  }, updatedSettings);
+
+  setSettings(updatedSettings);
+};
+
+
+  // Set the settings object for the user in the db
+  const saveSettings = () => {
+    axios.post(`${SERVER_URL}/save-settings`, {
+      userId: user.id,
+      settings: settings,
+    })
+    .then((response) => {
+      // Success
+      toast.info("Settings saved!");
+    })
+    .catch((error) => {
+      console.log(error);
+      toast.error("An error occurred. Please try again.");
+
+    });
+  }
+
+
   if (loading) {
     return <p>Loading...</p>;
   }
@@ -716,6 +758,9 @@ const addNote = (note) => {
 
         // User
         user={user}
+        settings={settings}
+        updateSetting={updateSetting}
+        saveSettings={saveSettings}
 
         // Modals
         setShowAddTask={setShowAddTask}

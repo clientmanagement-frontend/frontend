@@ -26,6 +26,9 @@ const templateSchema = new mongoose.Schema({
 });
 
 const UserSchema = new mongoose.Schema({
+    settings: {
+        type: Object
+    },
     notes: {
         type: Object,
     },
