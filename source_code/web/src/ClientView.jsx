@@ -28,8 +28,8 @@ const ClientView = ({ client, onBack, onEdit }) => {
 
             <div>
                 {client.address && (<p style = {{padding: 0, margin: 0}}>{client.address}</p>)}
-                {client.phone && (<p style = {{padding: 0, margin: 0}}>{client.phone}</p>)}
-                {client.email && (<p style = {{padding: 0, margin: 0}}>{client.email}</p>)}
+                {/* {client.phone && (<p style = {{padding: 0, margin: 0}}>{client.phone}</p>)}
+                {client.email && (<p style = {{padding: 0, margin: 0}}>{client.email}</p>)} */}
             </div>
 
         </div>

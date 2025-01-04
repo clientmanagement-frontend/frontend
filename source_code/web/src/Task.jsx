@@ -47,10 +47,10 @@ export default function Task({ task, onDone, onEdit, onDoclink, isDashboard }) {
             {calculateDueDate(task.due)}
           </p>
         </div>
-        {task.client && (
-          <p style={{ margin: "5px 0", fontSize: "14px" }}>
-            Client: {task.client.name}
-          </p>
+        {task.client && isDashboard && (
+          <p style={{ fontSize: "14px", fontWeight: 100, position: "absolute", bottom: -5  }}>
+          {task.client ? task.client.name : "General"}
+        </p>
         )}
         <p style={{ margin: "5px 0", fontSize: "14px" }}>{task.description}</p>
       </div>

@@ -16,7 +16,7 @@ const SendDocument = ({
   };
 
   const [body, setBody] = useState(
-    `Please see the attached document, and let me know if you have any questions.${doc.deadline ? `\nYour response by ${dateToString(new Date(doc.deadline))} is appreciated` : ""}\n\nThank you!`
+    `I just emailed you the ${doc.type}, let me know if you have any questions.${doc.fields?.deadline ? `\nYour response by ${dateToString(new Date(doc.deadline))} is appreciated` : ""}\n\nThank you!`
   );
   const [subject, setSubject] = useState(doc ? `Regarding ${doc.name}` : "");
   const [dueDate, setDueDate] = useState(""); // Date input
@@ -111,6 +111,10 @@ const SendDocument = ({
                       (curClient.email.trim() !== "")) || !curClient)) && (
                         <option value="Email">Email</option>
                       )}
+                      {(typeof curClient?.phone === "string") &&
+                      (curClient.phone.trim() !== "") && (
+                        <option value="Both">Both</option>
+                      )}
                   </select>
                   <label htmlFor="method">Method</label>
                 </div>
@@ -168,7 +172,10 @@ const SendDocument = ({
                   Cancel
                 </button>
                 {currentClientHasContactInfo && method && (
-                  <button className="btn btn-primary" onClick={handleSend}>
+                  <button className="btn btn-primary" onClick={() => {
+                    navigator.clipboard.writeText(`${subject}\n\n${body}`);
+                    handleSend();
+                  }}>
                     Send
                   </button>
                 )}

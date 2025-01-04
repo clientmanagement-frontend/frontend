@@ -1193,7 +1193,7 @@ router.post("/send-document", async (request, response) => {
     };
 
     // If message.due is provided and valid, schedule the email
-    if (message.method === "Email") {
+    if (message.method !== "Text") {
       if (message.due) {
         const dueTime = new Date(message.due).getTime();
         const now = Date.now();

@@ -218,17 +218,6 @@ const Main = () => {
     .catch((error) => {
       // Remove from state if it failed
       console.log(error);
-      if (!complete)
-      {
-        handleTask({
-          doclink: doc._id,
-          name: `Finish ${doc.name}`,
-          description: "",
-          due: doc.deadline,
-          client: doc.client,
-          type: "complete"
-        }, false);
-      }
     });
 
   }
@@ -240,6 +229,7 @@ const Main = () => {
       setShowAddTemplate(true);
       return;
     }
+    setCurrentTemplate(template)
 
     setCurrentDocument({completed: false, templateId: template._id, fields: template.fields, type: template.name, name: `New ${template.name} Document`});
 
@@ -543,6 +533,7 @@ const Main = () => {
   // Actually send the document
   // Called from the SendDocument modal
   const sendDocument = async (doc, msg) => {
+    
 
     const formData = {
       userId: user.id,
@@ -555,20 +546,23 @@ const Main = () => {
     setShowSend(false);
     setCurrentDocument(null);
 
-    // Text message to send
-    if (msg.method === "Text") {
+    // Text message to send (Text or Both)
+    if (msg.method !== "Email") {
 
       // Google Voice API
       // Open a link in the new tab
-      window.open(`https://voice.google.com/u/1/messages?itemId=t.%2B1${msg.client?.phone}`, "_blank")
-      .then((newTab) => {
+      const newTab = window.open(`https://voice.google.com/u/1/messages?itemId=t.%2B1${msg.client?.phone}`)
+      
+      
+      if (newTab) {
         newTab.onload = () => {
-          const messageField = newTab.document.querySelector('textarea');
+          // Select the textarea element
+          const messageField = newTab.document.querySelector('textarea.cdk-textarea-autosize');
           if (messageField) {
             messageField.value = `${msg.subject}\n\n${msg.body}`;
           }
         };
-      });
+      }
 
 
     }

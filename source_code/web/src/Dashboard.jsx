@@ -1,28 +1,27 @@
 import React from "react";
 import ClientList from "./ClientList";
 import ClientView from "./ClientView";
+import ClientNotes from "./ClientNotes";
 import Tasks from "./Tasks";
 import Templates from "./Templates";
 import { useNavigate } from "react-router-dom";
+import Documents from "./Documents";
 
 export default function Dashboard(props) {
     const navigate = useNavigate();
 
     return (
       <div style={{ display: "flex", height: "100vh" }}>
-        {/* Left Panel - ClientList */}
+        
         {/* Flex shrink here */}
+        {/* Left Panel - ClientList */}
+        
+        {props.currentClient && (
         <div>
-          <ClientList
-            clients={props.clients}
-            onClientClick={(client) =>{
-                props.setCurrentClient(client)
-            }}
-            addClient={() => props.setShowAddClient(true)}
-            search={props.search}
-            setSearch={props.setSearch}
+          <ClientNotes
           />
         </div>
+        )}
   
         {/* Client View */}
         {props.currentClient && (
@@ -43,7 +42,7 @@ export default function Dashboard(props) {
               }}
             />
             <Tasks
-              title={`${props.currentClient.name.substring(
+              title={true? "Tasks" : `${props.currentClient.name.substring(
                 0,
                 props.currentClient.name.indexOf(" ") > 0
                   ? props.currentClient.name.indexOf(" ")
@@ -59,6 +58,27 @@ export default function Dashboard(props) {
               }}
               onDoclink={props.onDoclink}
             />
+
+            <Documents
+                documents={props.documents.filter(
+                    (doc) => doc.client?._id === props.currentClient._id
+                )}
+                newDoc={() => {
+                    props.createDocument(props.currentTemplate)
+                }}
+                onClick={(doc) => props.setCurrentDocument(doc)}
+                onComplete = {(doc) => {
+                    doc.completed = !doc.completed;
+                    props.saveDoc(doc);
+                  }}
+                onSend={props.sendDoc}
+                onSave={props.saveDoc}
+                
+                currentTemplate = {props.currentTemplate}
+                setCurrentTemplate = {props.setCurrentTemplate}
+                templates = {props.templates}
+            
+            ></Documents>
           </div>
         )}
 
@@ -66,7 +86,19 @@ export default function Dashboard(props) {
         {/* Main Content */}
         
 
-
+        {!props.currentClient && (
+            <div>
+            <ClientList
+              clients={props.clients}
+              onClientClick={(client) =>{
+                  props.setCurrentClient(client)
+              }}
+              addClient={() => props.setShowAddClient(true)}
+              search={props.search}
+              setSearch={props.setSearch}
+            />
+          </div>
+          )}
 
         {!props.currentClient && (
           <div style={{ flex: 1, padding: "10px", gap: 20   , display: "flex", flexDirection: "column" , justifyContent: "space-between"}}>
