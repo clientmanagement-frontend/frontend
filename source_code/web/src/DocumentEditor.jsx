@@ -128,6 +128,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
                 <label htmlFor="client">For</label>
             </div>
 
+            {!doc.completed && (
             <div className="form-floating mb-3">
                 <input
                 type="date"
@@ -136,10 +137,10 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
                 placeholder="Deadline"
                 value={deadline}
                 onChange={(e) => setDeadline( e.target.value)}
-                disabled={doc.completed}
                 />
                 <label htmlFor="deadline">Personal Deadline</label>
             </div>
+            )}
             </div>
 
           <div className="form-floating mb-3">

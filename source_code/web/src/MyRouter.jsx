@@ -90,9 +90,16 @@ const MyRouter = (props) => {
                 currentDocument = {props.currentDocument}
                 setCurrentDocument = {props.setCurrentDocument}
 
-                onClick={(doc) => props.setCurrentDocument(doc)}
+                onClick={(doc) => {
+                  props.setCurrentDocument(doc);
+                  navigate("/documents");}
+                }
                 type = {props.currentTemplate?.name}
-                newDoc={() => props.createDocument(props.currentTemplate)}
+                newDoc={() => {
+                  props.createDocument(props.currentTemplate);
+                  navigate("/documents");
+
+                }}
 
                 onComplete = {(doc) => {
                   doc.completed = !doc.completed;

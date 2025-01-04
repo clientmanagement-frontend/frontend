@@ -66,7 +66,10 @@ export default function Dashboard(props) {
                 newDoc={() => {
                     props.createDocument(props.currentTemplate)
                 }}
-                onClick={(doc) => props.setCurrentDocument(doc)}
+                onClick={(doc) => {
+                    props.setCurrentDocument(doc);
+                    navigate("/documents");}
+                  }
                 onComplete = {(doc) => {
                     doc.completed = !doc.completed;
                     props.saveDoc(doc);
@@ -93,7 +96,10 @@ export default function Dashboard(props) {
               onClientClick={(client) =>{
                   props.setCurrentClient(client)
               }}
-              addClient={() => props.setShowAddClient(true)}
+              addClient={() => {
+                props.setShowAddClient(true);
+                props.setCurrentClient(null);
+              }}
               search={props.search}
               setSearch={props.setSearch}
             />
