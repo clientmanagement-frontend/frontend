@@ -1225,6 +1225,89 @@ router.post("/send-document", async (request, response) => {
 });
 
 
+// Add a note given userId and note
+router.post("/add-note", async (request, response) => {
+  const userId = request.body.userId;
+  const clientId = request.body.clientId;
+  const note = request.body.note;
+
+  try {
+    // Check if the note has an `_id` (indicating an update)
+    if (note._id) {
+      const result = await User.updateOne(
+        {
+          _id: userId,
+          [`notes.${clientId}`]: { $elemMatch: { _id: note._id } },
+        },
+        {
+          $set: { [`notes.${clientId}.$.body`]: note.body },
+        }
+      );
+
+      if (result.matchedCount > 0) {
+        return response.status(200).send({ message: "Note updated successfully." });
+      } else {
+        return response.status(404).send({ message: "Note not found." });
+      }
+    } else {
+      // Add a new note
+      const newNoteId = new mongoose.Types.ObjectId().toString();
+
+      const enrichedNote = {
+        ...note,
+        _id: newNoteId,
+      };
+
+      const result = await User.updateOne(
+        { _id: userId },
+        {
+          $push: { [`notes.${clientId}`]: enrichedNote },
+        }
+      );
+
+      if (result.matchedCount > 0) {
+        return response
+          .status(201)
+          .send({ message: "Note added successfully.", id: newNoteId });
+      } else {
+        return response.status(404).send({ message: "User or client not found." });
+      }
+    }
+  } catch (error) {
+    console.error("Error updating user notes:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+
+router.post("/delete-note", async (request, response) => {
+  // The bug is deleting a note that wasnt loaded from the server, but from the client
+  const userId = request.body.userId;
+  const clientId = request.body.clientId;
+  const noteId = request.body.noteId;
+
+
+  try {
+    const result = await User.updateOne(
+      { _id: userId },
+      { $pull: { [`notes.${clientId}`]: { _id: noteId } } }
+    );
+
+    if (result.modifiedCount > 0) {
+      response.status(200).send({ message: "Note deleted successfully." });
+    } else {
+      response
+        .status(404)
+        .send({ message: "Note not found or no changes made." });
+    }
+  } catch (error) {
+    console.error("Error deleting user note:", error);
+    response.status(500).send({ message: "Internal server error." });
+  }
+});
+
+
+
+
 
 
 // Add a new template (or edit)

@@ -37,6 +37,8 @@ const Main = () => {
   // The current client
   const [currentClient, setCurrentClient] = useState(null);
   const [editingClient, setEditingClient] = useState(false);
+  const [notes, setNotes] = useState("");
+
 
   // The current task
   const [currentTask, setCurrentTask] = useState(null);
@@ -56,6 +58,7 @@ const Main = () => {
       (doc.templateId === currentTemplate?._id && (doc.client?.name ? doc.client.name.toLowerCase().includes(search.toLowerCase()) : true))
     );
   }, [documents, search, currentTemplate]);
+
 
 
 
@@ -80,6 +83,8 @@ const Main = () => {
           setTemplates(response.data.user.templates);
           setDocuments(response.data.user.documents);
 
+          setNotes(response.data.user.notes); // For performance, we can get notes for a client when we click on the client
+
           setLoading(false);
         })
         .catch((error) => {
@@ -98,6 +103,72 @@ const Main = () => {
       setLoading(false);
     }
   }, [login]);
+
+
+  // Delete a note
+const deleteNote = (id) => {
+  axios
+    .post(`${SERVER_URL}/delete-note`, {
+      userId: user.id,
+      clientId: currentClient._id,
+      noteId: id,
+    })
+    .then((response) => {
+      setNotes((prev) => ({
+        ...prev,
+        [currentClient._id]: prev[currentClient._id].filter(
+          (n) => n._id !== id
+        ),
+      }));
+    })
+    .catch((error) => {
+      console.error(error);
+      alert("An error occurred. Please try again.");
+    });
+};
+
+// Add or update a note
+const addNote = (note) => {
+  // Add the note to state immediately if it's a new note (no _id)
+  if (!note._id) {
+    setNotes((prev) => ({
+      ...prev,
+      [currentClient._id]: [...(prev[currentClient._id] || []), note],
+    }));
+  } else {
+    // Update the note in state
+    setNotes((prev) => ({
+      ...prev,
+      [currentClient._id]: prev[currentClient._id].map((n) =>
+        n._id === note._id ? note : n
+      ),
+    }));
+  }
+
+  axios
+    .post(`${SERVER_URL}/add-note`, {
+      userId: user.id,
+      clientId: currentClient._id,
+      note: note,
+    })
+    .then((response) => {
+      // If it was a new note, update the state with the new note _id from the server
+      if (!note._id) {
+        const newNote = { ...note, _id: response.data.id };
+        setNotes((prev) => ({
+          ...prev,
+          [currentClient._id]: prev[currentClient._id].map((n) =>
+            n.timestamp === note.timestamp ? newNote : n
+          ),
+        }));
+      }
+    })
+    .catch((error) => {
+      console.error(error);
+      alert("An error occurred. Please try again.");
+    });
+};
+
 
   // Save document to server
   const saveDoc = async (doc, del, complete) => {
@@ -658,6 +729,11 @@ const Main = () => {
         // Doclink
         onDoclink = {docLink}
         showSend = {showSend}
+
+        // Notes
+        notes = {notes}
+        addNote = {addNote}
+        deleteNote = {deleteNote}
 
 
 

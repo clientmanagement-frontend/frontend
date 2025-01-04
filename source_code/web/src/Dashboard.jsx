@@ -11,7 +11,8 @@ export default function Dashboard(props) {
     const navigate = useNavigate();
 
     return (
-      <div style={{ display: "flex", height: "100vh" }}>
+        <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+
         
         {/* Flex shrink here */}
         {/* Left Panel - ClientList */}
@@ -19,6 +20,10 @@ export default function Dashboard(props) {
         {props.currentClient && (
         <div>
           <ClientNotes
+            // Notes
+            addNote = {props.addNote}
+            deleteNote = {props.deleteNote}
+            notes = {props.notes[props.currentClient._id] || []}
           />
         </div>
         )}

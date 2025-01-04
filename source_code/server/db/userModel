@@ -26,6 +26,9 @@ const templateSchema = new mongoose.Schema({
 });
 
 const UserSchema = new mongoose.Schema({
+    notes: {
+        type: Object,
+    },
 documents: {
     type: Array,
     default: []

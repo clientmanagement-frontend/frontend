@@ -67,6 +67,11 @@ const MyRouter = (props) => {
                 navigate("/documents");
               }}
 
+              // Notes
+              addNote = {props.addNote}
+              deleteNote = {props.deleteNote}
+              notes = {props.notes}
+
 
 
 
