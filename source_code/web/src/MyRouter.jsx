@@ -130,7 +130,7 @@ const MyRouter = (props) => {
                 setCurrentTemplate = {props.setCurrentTemplate}
               
               />} />
-          <Route path="account" element={<Account host = {props.host}/>} />
+          <Route path="account" element={<Account host = {props.host} user = {props.user}/>} />
           <Route path="contact" element={<ContactForm host = {props.host}/>} />
       </Routes>
     

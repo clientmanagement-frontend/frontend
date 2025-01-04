@@ -843,7 +843,7 @@ router.post("/add-task", async (request, response) => {
         if (result.modifiedCount > 0) {
           return response.status(200).send({ message: "Task updated successfully." });
         } else {
-          return response.status(404).send({ message: "No changes made or task not found." });
+          return response.status(304).send({ message: "No changes made" });
         }
 
       } else {
@@ -861,7 +861,7 @@ router.post("/add-task", async (request, response) => {
         if (result.modifiedCount > 0) {
           return response.status(200).send({ message: "Task added successfully." });
         } else {
-          return response.status(404).send({ message: "No changes made or task not found." });
+          return response.status(200).send({ message: "No changes made" });
         }
       }
     } else {
@@ -1215,6 +1215,8 @@ router.post("/send-document", async (request, response) => {
     else
     {
       // Texts handled on frontend for now
+      response.status(200).send({ message: "Message copied to clipboard" });
+
     }
 
 

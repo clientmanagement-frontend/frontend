@@ -9,6 +9,8 @@ import AddTemplate from "./AddTemplate.jsx";
 import AddTask from "./AddTask.jsx";
 import AddClient from "./AddClient.jsx";
 import SendDocument from "./SendDocument.jsx";
+import { ToastContainer, toast } from 'react-toastify';
+import Confetti from 'react-confetti';
 
 const Main = () => {
   const SERVER_URL = `http://localhost:3001`;
@@ -49,6 +51,15 @@ const Main = () => {
 
   // Search term for documents and clients
   const [search, setSearch] = useState("");
+
+  // Confetti
+
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const triggerConfetti = () => {
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 4000);
+  };
 
   // Filter documents by search and current template
   const filteredDocuments = useMemo(() => {
@@ -123,7 +134,8 @@ const deleteNote = (id) => {
     })
     .catch((error) => {
       console.error(error);
-      alert("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
+
     });
 };
 
@@ -165,7 +177,8 @@ const addNote = (note) => {
     })
     .catch((error) => {
       console.error(error);
-      alert("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
+
     });
 };
 
@@ -178,6 +191,8 @@ const addNote = (note) => {
     {
       // We just completed the document.
       // Show some magic on the frontend. Task gets created after backend response of save-doc (so we have the id )
+      toast.success("Document completed!");
+      
       
     }
 
@@ -208,7 +223,7 @@ const addNote = (note) => {
         // Put it back in state
         setDocuments((prev) => [...prev, doc]);
         console.log(error);
-        alert("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.");
       });
 
       return;
@@ -284,7 +299,10 @@ const addNote = (note) => {
         else if (doc.deadline) handleTask(task, false);
 
       // Change to a toast notification
-      // alert(response.data.message);
+      if (!complete)
+      {
+        toast.info(response.data.message);
+      }
     })
     .catch((error) => {
       // Remove from state if it failed
@@ -336,16 +354,22 @@ const addNote = (note) => {
       })
       .catch((error) => {
         console.log(error);
-        alert("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.");
+
       });
     }
   }, [currentDocument, user?.id, SERVER_URL]);
 
 
   // Add, delete or edit the task
-  const handleTask = (task, del) => {
+  const handleTask = (task, del, harsh) => {
     // The client to associate the task with
     const client = task.client ? task.client._id : "none"
+
+    if (del && !harsh)
+    {
+      triggerConfetti();
+    }
 
     if (del) {
       axios.post(`${SERVER_URL}/delete-task`, {
@@ -370,7 +394,8 @@ const addNote = (note) => {
       })
       .catch((error) => {
         console.log(error);
-        alert("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.");
+
       });
 
       return;
@@ -432,8 +457,11 @@ const addNote = (note) => {
       
     })
     .catch((error) => {
-      console.log(error);
-      alert("An error occurred. Please try again.");
+        console.log(error);
+        toast.error("An error occurred. Please try again.");
+
+      
+      
     });
 
   }
@@ -452,7 +480,8 @@ const addNote = (note) => {
       })
       .catch((error) => {
         console.log(error);
-        alert("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.");
+
       });
 
       return;
@@ -485,7 +514,8 @@ const addNote = (note) => {
     })
     .catch((error) => {
       console.log(error);
-      alert("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
+
     });
 
   }
@@ -528,7 +558,8 @@ const addNote = (note) => {
       })
       .catch((error) => {
         console.log(error);
-        alert("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.");
+
       });
 
       return;
@@ -579,7 +610,8 @@ const addNote = (note) => {
     })
     .catch((error) => {
       console.log(error);
-      alert("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
+
     });
 
   }
@@ -647,11 +679,12 @@ const addNote = (note) => {
       
 
       // Success
-      alert(response.data.message);
+      toast.success(response.data.message);
     })
     .catch((error) => {
       console.log(error);
-      alert("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
+
     });
   }
 
@@ -703,7 +736,7 @@ const addNote = (note) => {
         setEditingClient={setEditingClient}
 
         // Remove a task
-        removeTask={(task) => handleTask(task, true)}
+        removeTask={(task, dismiss) => handleTask(task, true, dismiss)}
         setCurrentTask={setCurrentTask}
 
         // Templates
@@ -739,19 +772,14 @@ const addNote = (note) => {
 
       />
 
-      {/* Modals Container */}
-    {/* <div
+      <ToastContainer />
+      {showConfetti && 
+      <Confetti
+      gravity={0.2}
       style={{
-        display: "flex",
-        justifyContent: "center",
-        gap: "50px",
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        zIndex: 1000,
-      }}
-    > */}
+        animation: 'fadeOut 5s ease-in-out',
+      }} />}
+
       {showSend && (
         <SendDocument
         //  Provide the current client for who to send to
@@ -780,8 +808,8 @@ const addNote = (note) => {
             setShowAddTask(false);
             setEditingClient(false);
           }}
-          handle={(task, del) => {
-            handleTask(task, del);
+          handle={(task, del, harsh) => {
+            handleTask(task, del, harsh);
             setShowAddTask(false);
             setCurrentTask(null);
           }}

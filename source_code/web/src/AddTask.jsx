@@ -20,7 +20,7 @@ const AddTask = ({ clients, close, handle, task, currentClient }) => {
   const handleDelete = () => {
     if (task) {
       if (window.confirm(`Are you sure you want to delete ${task.name}?`)) {
-        handle(task, true);
+        handle(task, true, true);
       } else {
         return;
       }

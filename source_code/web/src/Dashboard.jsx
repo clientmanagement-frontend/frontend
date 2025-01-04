@@ -62,6 +62,17 @@ export default function Dashboard(props) {
                 props.setShowAddTask(true); // Open the modal
               }}
               onDoclink={props.onDoclink}
+              onDone={(task, dismiss) => {
+                if (task.type === "send") {
+                    // Send the document
+                    // Send prop will handle who to send to
+                    props.sendDoc(task, true);
+
+                } 
+                // Standard task: delete the task
+                else props.removeTask(task, dismiss)
+                
+              }}
             />
 
             <Documents
@@ -117,7 +128,7 @@ export default function Dashboard(props) {
               title="My Tasks"
               tasks={props.tasks}
               setShowAddTask={props.setShowAddTask}
-              onDone={(task) => {
+              onDone={(task, dismiss) => {
                 if (task.type === "send") {
                     // Send the document
                     // Send prop will handle who to send to
@@ -125,7 +136,7 @@ export default function Dashboard(props) {
 
                 } 
                 // Standard task: delete the task
-                else props.removeTask(task)
+                else props.removeTask(task, dismiss)
                 
               }}
               onEdit={(task) => {

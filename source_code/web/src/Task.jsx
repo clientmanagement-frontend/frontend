@@ -71,7 +71,7 @@ export default function Task({ task, onDone, onEdit, onDoclink, isDashboard }) {
             cursor: "pointer",
             fontSize: "14px",
             }}
-            onClick={(e) => {task.type === "send" ? onDone({...task, type: ""}) : onDone(task); e.stopPropagation();}}
+            onClick={(e) => {task.type === "send" ? onDone({...task, type: ""}, true) : onDone(task, true); e.stopPropagation();}}
 
             
         >
