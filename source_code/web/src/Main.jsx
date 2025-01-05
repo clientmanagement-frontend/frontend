@@ -286,7 +286,7 @@ const addNote = (note) => {
 
         // If it doesn't exist, create a new task, if we saved a draft
         
-        if (!task && !complete && (doc.client ? settings.autoTaskGeneration.completeClientDocuments : settings.autoTaskGeneration.completeGeneralDocuments))
+        if (!task && !complete && (doc.client ? settings.autoTaskGeneration.finishClientDocuments : settings.autoTaskGeneration.finishGeneralDocuments))
         {
           handleTask({
             doclink: doc._id,

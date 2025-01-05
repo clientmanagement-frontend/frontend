@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 const Account = (props) => {
   const host = props.host;
   const settings = props.settings ?? {};
-  console.log(settings)
 
   const [company, setCompany] = useState(props.user.company || "");
   const [password, setPassword] = useState("");
