@@ -30,6 +30,7 @@ const UserSchema = new mongoose.Schema({
         type: Object,
         default: {
           useGoogleVoice: true,
+          defaultTaskDeadline: 3,
           taskOverviewEmails: "Weekly",
           autoTaskGeneration: {
             finishClientDocuments: false,
@@ -38,7 +39,7 @@ const UserSchema = new mongoose.Schema({
             sendGeneralDocuments: false,
           },
           googleVoiceAccountIndex: "0",
-          defaultEmailBody: "Hello, I just sent you the $DOCTYPE$.",
+          defaultEmailBody: "Hello $CLIENT$, I just sent you the $DOCTYPE$.",
           defaultEmailSubject: "Regarding $DOCNAME$",
           defaultEmailFooter: "Best Regards,\n$COMPANY$",
           includeDeadlines: true,

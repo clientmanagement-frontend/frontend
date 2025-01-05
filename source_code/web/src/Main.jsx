@@ -659,22 +659,22 @@ const addNote = (note) => {
     // Text message to send (Text or Both)
     if (msg.method !== "Email") {
 
-      // Google Voice API
-      // Open a link in the new tab
-      const newTab = window.open(`https://voice.google.com/u/1/messages?itemId=t.%2B1${msg.client?.phone}`)
+      if (settings.useGoogleVoice)
+      {
+        // Google Voice API
+        // Open a link in the new tab
+        const newTab = window.open(`https://voice.google.com/u/${settings.googleVoiceAccountIndex}/messages?itemId=t.%2B1${msg.client?.phone}`)
       
-      
-      if (newTab) {
-        newTab.onload = () => {
-          // Select the textarea element
-          const messageField = newTab.document.querySelector('textarea.cdk-textarea-autosize');
-          if (messageField) {
-            messageField.value = `${msg.subject}\n\n${msg.body}`;
-          }
-        };
+        if (newTab) {
+          newTab.onload = () => {
+            // Select the textarea element
+            const messageField = newTab.document.querySelector('textarea.cdk-textarea-autosize');
+            if (messageField) {
+              messageField.value = `${msg.subject}\n\n${msg.body}`;
+            }
+          };
+        }
       }
-
-
     }
 
     const id = toast.loading("Sending your email!");
