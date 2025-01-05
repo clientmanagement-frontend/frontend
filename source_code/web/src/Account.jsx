@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 const Account = (props) => {
   const host = props.host;
   const settings = props.settings ?? {};
+  console.log(settings)
 
   const [company, setCompany] = useState(props.user.company || "");
   const [password, setPassword] = useState("");
@@ -19,7 +20,10 @@ const Account = (props) => {
 
   // Default Settings
   const defaultTaskDeadline = settings.defaultTaskDeadline || 3;
-  const defaultEmailBody = settings.defaultEmailBody || "";
+  const defaultEmailBody = settings.defaultEmailBody || "Hello, I just sent you the $DOCTYPE$.";
+  const defaultEmailSubject = settings.defaultEmailSubject || "Regarding $DOCNAME$";
+  const defaultEmailFooter = settings.defaultEmailFooter || "Best Regards,\n$COMPANY$";
+
   const includeDeadlines = settings.includeDeadlines !== undefined ? settings.includeDeadlines : false;
   const autoTaskGeneration = settings.autoTaskGeneration || {
     finishClientDocuments: true,
@@ -29,11 +33,11 @@ const Account = (props) => {
   };
 
   
-  const taskOverviewEmails = settings.taskOverviewEmails || "Daily";
+  const taskOverviewEmails = settings.taskOverviewEmails || "Weekly";
   const upcomingTaskEmails = settings.upcomingTaskEmails || {
-    oneWeek: false,
-    threeDays: false,
     oneDay: true,
+    threeDays: false,
+    oneWeek: false,
   };
   const useGoogleVoice = settings.useGoogleVoice || false;
   const googleVoiceAccountIndex = settings.googleVoiceAccountIndex !== undefined ? settings.googleVoiceAccountIndex : null;
@@ -42,6 +46,7 @@ const Account = (props) => {
     return ugly.replace(/([A-Z])/g, ' $1').replace(/^./, ugly[0].toUpperCase());
 
   }
+  
 
   const navigate = useNavigate();
 
@@ -89,6 +94,7 @@ const Account = (props) => {
 
   const saveSettings = () => {
     props.saveSettings();
+    
   };
 
   // Handle navigation away
@@ -352,17 +358,45 @@ const Account = (props) => {
 
                 {/* Default Email Body */}
                 <div>
-                    <div className="form-group">
                         <h4>
-                        Default Email Body
+                        Default Message
                         </h4>
+                        <div className="form-floating mb-3">
+                        
+                        <input
+                        value={defaultEmailSubject}
+                        onChange={(e) => setSetting("defaultEmailSubject", e.target.value)}
+                        className="form-control"
+                        placeholder="Enter default email subject"
+                        
+                        />
+                        <label>Subject</label>
+                    </div>
+
+                    <div className="form-floating mb-3">
+                        
                         <textarea
-                        style={{ margin: "5px" }}
+                        style={{ height: 90 }}
                         value={defaultEmailBody}
                         onChange={(e) => setSetting("defaultEmailBody", e.target.value)}
                         className="form-control"
                         placeholder="Enter default email body"
+                        
                         />
+                        <label>Body</label>
+                    </div>
+
+                    <div className="form-floating mb-3">
+                        
+                        <textarea
+                        style={{ height: 80 }}
+                        value={defaultEmailFooter}
+                        onChange={(e) => setSetting("defaultEmailFooter", e.target.value)}
+                        className="form-control"
+                        placeholder="Enter default email footer"
+                        
+                        />
+                        <label>Footer</label>
                     </div>
 
                     {/* Include Deadlines in Email Body */}
@@ -374,7 +408,7 @@ const Account = (props) => {
                         checked={includeDeadlines}
                         onChange={(e) => setSetting("includeDeadlines", e.target.checked)}
                         />
-                        <label htmlFor="includeDeadlines" className="form-check-label" style={{ marginLeft: "5px", color: "gray" }}>
+                        <label htmlFor="includeDeadlines" className="form-check-label" >
                             Include Deadlines
                         </label>
                     </div>
@@ -382,7 +416,6 @@ const Account = (props) => {
 
                 {/* Google Voice Integration */}
         <div>
-        <h4>Google Voice</h4>
             <div className="form-group" >
                 
                     <div className="form-check">
@@ -394,7 +427,7 @@ const Account = (props) => {
                         onChange={(e) => setSetting("useGoogleVoice", e.target.checked)}
                         />
                         <label className="form-check-label" htmlFor="googleVoiceCheckbox">
-                        Use Google Voice
+                        Use Google Voice for Text
                         </label>
                     </div>
 

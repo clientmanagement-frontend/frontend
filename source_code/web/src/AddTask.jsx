@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 
-const AddTask = ({ clients, close, handle, task, currentClient }) => {
+const AddTask = ({ clients, close, handle, task, currentClient, due }) => {
   const getDefaultDueDate = () => {
     const date = new Date();
-    date.setDate(date.getDate() + 2);
+    date.setDate(date.getDate() + due);
     return date.toISOString().split("T")[0]; // Format as `YYYY-MM-DD` for `<input type="date">`
   };
 
@@ -11,7 +11,7 @@ const AddTask = ({ clients, close, handle, task, currentClient }) => {
   const [description, setDescription] = useState(task ? task.description : "");
   const [dueDate, setDueDate] = useState(
     task && task.due 
-      ? (typeof task.due === "string" ? task.due : task.due.toISOString().split("T")[0]) 
+      ? (typeof task.due === "string" ? task.due.split("T")[0] : task.due.toISOString().split("T")[0]) 
       : getDefaultDueDate()
   );
   

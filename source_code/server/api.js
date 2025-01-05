@@ -90,131 +90,135 @@ const pingUrl = () => {
 
 cron.schedule('*/10 * * * *', pingUrl);
 pingUrl();
+maintainUsers()
 
-  async function maintainUsers()
-  {
-    const currentDate = new Date();
+const moment = require("moment");
 
-    // Email me a confirmation that the server is running
-    const mailOptions = {
-      from: process.env.MAILER_USER,
-      to: process.env.ADMIN_EMAIL,
-      subject: `Successful Template Maitenance`,
-      text: `Hi Peter, just a confirmation that maitenance has ran for all Template users successfully.`,
+async function maintainUsers() {
+  const currentDate = new Date();
+
+  // Email admin confirmation
+  const mailOptions = {
+    from: process.env.MAILER_USER,
+    to: process.env.ADMIN_EMAIL,
+    subject: `Successful CRM Maintenance`,
+    text: `Hi Peter, just a confirmation that maintenance has run for all CRM users successfully.`,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log("Error sending warning email:", error);
+    }
+  });
+
+  try {
+    // Fetch all users with settings
+    const users = await User.find({});
+
+    // Helper: Generate HTML for tasks
+    const generateTaskHTML = (tasks) => {
+      return tasks
+        .map(
+          (task) => `
+        <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
+          <h3 style="margin: 0; color: #333;">${task.name}</h3>
+          <p style="color: #666;">${task.description}</p>
+          <p style="color: #666;"><strong>Due:</strong> ${moment(task.due).format("MMMM Do, YYYY")}</p>
+          ${task.client ? `<p style="color: #666;"><strong>Client:</strong> ${task.client.name}</p>` : ''}
+        </div>`
+        )
+        .join("");
     };
-  
-    // Send the email
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log('Error sending warning email:', error);
-      } else {
-      }
-    });
 
-    // Calculate the date 10 days from now
-    const futureDate = new Date(currentDate);
-    futureDate.setDate(currentDate.getDate() + 10);
-
-    // Format the date as "Month Day, Year"
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    const formattedDate = futureDate.toLocaleDateString('en-US', options);
-
-
-    try {
-
-      // SUBSCRIPTIONS
-
-      // Find all users that renew today and check/update entitlements
-      let users = await User.find({renewal_date: currentDate.getDate()})
-        
-      // Iterate through each user and update tokens if they have an active entitlement
-      for (const user of users) {
-        let subscribed = await isSubscribed(user._id)
-        if (subscribed)
-        {
-          await User.updateOne({ _id: user._id }, { $set: { tokens: process.env.TOKEN_COUNT } });
-        }
-        else
-        {
-          // It looks like they expired today. Remove tokens.
-          // Update: They did pay for month long access.. so dont remove the tokens. 
-          await User.updateOne({ _id: user._id }, { $set: { renewal_date: 0 } });
-          // Be sure to stop renewing them.
-        }
-        
-      }
-
-
-    
-      // Increment 'dormant' field by 1 for all users
-      await User.updateMany({}, { $inc: { dormant: 1 } });
-
-      // Find and remove users with 'marked_for_deletion' and 'email_confirmed' both set to false
-      await User.deleteMany({ marked_for_deletion: true });
-
-      // Email a warning to all inactive users
-      const dormantUsers = await User.find({
-        $and: [
-          { dormant: { $gte: 365 } }
-        ]
+    // Helper: Filter tasks by due date range
+    const filterTasks = (tasks, startDate, endDate) => {
+      return tasks.filter((task) => {
+        const dueDate = new Date(task.due);
+        return dueDate >= startDate && dueDate <= endDate;
       });
+    };
 
-      // Send each email to dormant users who are not subscribed
-      dormantUsers.forEach((user) => {
-        
-        // Dont delete paying users
-        if (!isSubscribed(user._id))
-        {
+    // Process each user
+    for (const user of users) {
+      const tasks = Array.from(user.tasks.values()).flat();
+
+      // Weekly Digest (Sundays)
+      if (
+        user.settings.taskOverviewEmails === "Weekly" &&
+        currentDate.getDay() === 0
+      ) {
+        const oneWeekFromNow = moment(currentDate).add(7, "days").toDate();
+        const weeklyTasks = filterTasks(tasks, currentDate, oneWeekFromNow);
+        if (weeklyTasks.length > 0) {
+          const overdueTasks = tasks.filter(task => new Date(task.due) < currentDate).sort((a, b) => new Date(a.due) - new Date(b.due));
+          const overdueTaskHTML = generateTaskHTML(overdueTasks);
+          const emailHTML = generateTaskHTML(weeklyTasks);
           const mailOptions = {
             from: process.env.MAILER_USER,
             to: user.email,
-            subject: `${process.env.APP_NAME} account scheduled for deletion`,
-            text: `Your ${process.env.APP_NAME} account hasn't been accessed in ${user.dormant} days, 
-            and data is scheduled to be purged from our system on ${formattedDate}. 
-            To keep your data, simply log in to your account. We hope to see you soon!`,
+            subject: "Your Weekly Task Digest",
+            html: `<h1 style="color: #007bff;">Upcoming Tasks</h1>${emailHTML}<h2 style="color: #ff4444;">Overdue Tasks</h2>${overdueTaskHTML}`,
           };
-        
-          // Send the email
-          transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-              console.log('Error sending warning email:', error);
-            } else {
-            }
-          });
-  
-
+          transporter.sendMail(mailOptions);
         }
-        
-      });
-
-
-      // MARK UNCONFIRMED USERS FOR DELETION
-      try {
-        // Find users where 'email_confirmed' is false
-        const unconfirmedUsers = await User.find({ email_confirmed: false });
-    
-        // For all unconfirmed users prepare to mark for deletion
-        // If they are not subscribed
-        const updatePromises = unconfirmedUsers
-        .filter(user => !isSubscribed(user._id))
-        .map((user) => {
-          user.marked_for_deletion = true;
-          return user.save();
-        });
-
-    
-        // Execute all the update operations
-        await Promise.all(updatePromises);
-    
-      } catch (error) {
-        console.error('Error marking users for deletion:', error);
       }
 
+      // Daily Digest
+      if (user.settings.taskOverviewEmails === "Daily") {
+        const tomorrow = moment(currentDate).add(1, "days").toDate();
+        const yesterday = moment(currentDate).subtract(1, "days").toDate();
+        const dailyTasks = filterTasks(tasks, yesterday, tomorrow);
+        if (dailyTasks.length > 0) {
+          const overdueTasks = tasks.filter(task => new Date(task.due) <  yesterday).sort((a, b) => new Date(a.due) - new Date(b.due));
 
-    } catch (error) {
-      console.error('Error updating users:', error);
+          const overdueTaskHTML = generateTaskHTML(overdueTasks);
+          const emailHTML = generateTaskHTML(dailyTasks);
+          const mailOptions = {
+            from: process.env.MAILER_USER,
+            to: user.email,
+            subject: "Your Daily Task Digest",
+            html: `<h1 style="color: #007bff;">Today's and Tomorrow's Tasks</h1>${emailHTML}${overdueTasks.length > 0 ? `<h2 style="color: #ff4444;">Overdue Tasks</h2>${overdueTaskHTML}`: ""}`,
+          };
+          transporter.sendMail(mailOptions);
+        }
+      }
+
+      // Upcoming Task Emails
+      const upcomingSettings = user.settings.upcomingTaskEmails || {};
+      const upcomingTasks = [];
+      if (upcomingSettings.oneWeek) {
+        const oneWeekFromNow = moment(currentDate).add(7, "days").toDate();
+        upcomingTasks.push(...filterTasks(tasks, oneWeekFromNow, oneWeekFromNow));
+      }
+      if (upcomingSettings.threeDays) {
+        const threeDaysFromNow = moment(currentDate).add(3, "days").toDate();
+        upcomingTasks.push(...filterTasks(tasks, threeDaysFromNow, threeDaysFromNow));
+      }
+      if (upcomingSettings.oneDay) {
+        const oneDayFromNow = moment(currentDate).add(1, "days").toDate();
+        upcomingTasks.push(...filterTasks(tasks, oneDayFromNow, oneDayFromNow));
+      }
+
+      if (upcomingTasks.length > 0) {
+        const overdueTasks = tasks.filter(task => new Date(task.due) < currentDate).sort((a, b) => new Date(a.due) - new Date(b.due));
+        const overdueTaskHTML = generateTaskHTML(overdueTasks);
+        const emailHTML = generateTaskHTML(upcomingTasks);
+        const mailOptions = {
+          from: process.env.MAILER_USER,
+          to: user.email,
+          subject: "Upcoming Tasks Reminder",
+          html: `<h1 style="color: #007bff;">Upcoming Tasks</h1>${emailHTML}<h2 style="color: #ff4444;">Overdue Tasks</h2>${overdueTaskHTML}`,
+        };
+        transporter.sendMail(mailOptions);
+      }
     }
+  } catch (error) {
+    console.error("Error updating users:", error);
   }
+}
+
+
+
 
 
 

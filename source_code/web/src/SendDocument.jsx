@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const SendDocument = ({
   clients,
@@ -7,6 +7,8 @@ const SendDocument = ({
   doc,
   currentClient,
   setEditingClient,
+  settings,
+  user
 }) => {
   const dateToString = (date) => {
     return date.toLocaleDateString("en-US", {
@@ -15,13 +17,35 @@ const SendDocument = ({
     });
   };
 
-  const [body, setBody] = useState(
-    `I just emailed you the ${doc.type}, let me know if you have any questions.${doc.fields?.deadline ? `\nYour response by ${dateToString(new Date(doc.deadline))} is appreciated` : ""}\n\nThank you!`
-  );
-  const [subject, setSubject] = useState(doc ? `Regarding ${doc.name}` : "");
+  const replacements = {
+    DOCTYPE: doc.type,
+    DOCNAME: doc.name,
+    DOCDESC: doc.description,
+    COMPANY: user.company,
+    ME: user.name,
+    CLIENT: doc.client ? doc.client.name : "all"
+  };
+
+  function replacePlaceholders(template) {
+    let result = template;
+    for (const [placeholder, value] of Object.entries(replacements)) {
+      const regex = new RegExp(`\\$${placeholder}\\$`, "g"); // Create a dynamic regex to match the placeholder
+      result = result.replace(regex, value);
+    }
+    return result;
+  }
+  
+
+  const [body, setBody] = useState(replacePlaceholders(`${settings?.defaultEmailBody ?? ""}${settings?.includeDeadlines && doc.fields.deadline ? `\n\nPlease kindly reply by ${dateToString(doc.deadline)}`:""}\n\n${replacePlaceholders(settings?.defaultEmailFooter ?? "")}`));
+  const [subject, setSubject] = useState(replacePlaceholders(settings?.defaultEmailSubject ?? ""));
   const [dueDate, setDueDate] = useState(""); // Date input
-  const [method, setMethod] = useState(""); // Contact method dropdown
   const [curClient, setCurClient] = useState(currentClient);
+  const [method, setMethod] = useState(curClient?.email ? "Email" : ""); // Contact method dropdown
+
+  useEffect(() => {
+
+    setMethod(curClient?.email ? "Email" : "")
+  }, [curClient])
 
   const handleSend = () => {
     const due = dueDate ? new Date(dueDate) : null;
@@ -137,9 +161,9 @@ const SendDocument = ({
                 <div className="form-floating mb-3">
                   
                   <textarea
+                  style = {{height: 130}}
                     className="form-control"
                     id="description"
-                    rows="10"
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     placeholder="Enter message body"

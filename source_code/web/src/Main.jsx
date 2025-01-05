@@ -197,6 +197,11 @@ const addNote = (note) => {
       
       
     }
+    if (!doc._id && complete)
+    {
+      // We created and completed this document in one go. Show confetti, because there was no task
+      triggerConfetti();
+    }
 
     
 
@@ -215,7 +220,7 @@ const addNote = (note) => {
       .then((response) => {
 
         // we need to delete the task for this document, if there is a task
-        const task = tasks[doc.client ? doc.client._id : "none"].find((t) => t._id === doc._id);
+        const task = tasks[doc.client ? doc.client._id : "none"].find((t) => t.doclink && t.doclink === doc._id);
         if (task) handleTask(task, true);
         
         // we no longer wait for the response
@@ -263,7 +268,7 @@ const addNote = (note) => {
       // If the document is complete, we need to create a task to send the document
 
       // add && doc.client if we only want to send tasks for clients
-      if (complete) {
+      if ((doc.client ? settings.autoTaskGeneration.sendClientDocuments : settings.autoTaskGeneration.sendGeneralDocuments) && complete) {
         handleTask({
           name: `Send ${doc.name}`,
           description: `Send out the ${doc.type}`,
@@ -281,7 +286,7 @@ const addNote = (note) => {
 
         // If it doesn't exist, create a new task, if we saved a draft
         
-        if (!task && !complete)
+        if (!task && !complete && (doc.client ? settings.autoTaskGeneration.completeClientDocuments : settings.autoTaskGeneration.completeGeneralDocuments))
         {
           handleTask({
             doclink: doc._id,
@@ -672,20 +677,35 @@ const addNote = (note) => {
 
     }
 
+    const id = toast.loading("Sending your email!");
     
     axios.post(`${SERVER_URL}/send-document`, formData)
     .then((response) => {
       // We need to update the task to be satisfied, if it exists
       if (currentTask?.doclink === currentDocument?._id) handleTask(currentTask, true);
+
       setCurrentTask(null);
+      toast.update(id, {render: response.data.message, type: "success", isLoading: false});
+      setTimeout(() => {
+        toast.dismiss(id); // Dismiss the toast after 2 seconds
+      }, 2000); // 2000 ms (2 seconds)
       
 
       // Success
-      toast.success(response.data.message);
     })
     .catch((error) => {
       console.log(error);
-      toast.error("An error occurred. Please try again.");
+      toast.update(id, {render: "Something went wrong, please try again", type: "error", isLoading: false});
+      setTimeout(() => {
+        toast.dismiss(id); // Dismiss the toast after 2 seconds
+      }, 2000); // 2000 ms (2 seconds)
+
+
+      // Add the task back
+      // if (currentTask?.doclink === currentDocument?._id) handleTask(currentTask);
+      // setCurrentTask(null);
+
+
 
     });
   }
@@ -843,6 +863,8 @@ const updateSetting = (setting, value) => {
             setCurrentTask(null);
             setCurrentDocument(null);
           }}
+          settings = {settings}
+          user = {user}
         />
       )}
 
@@ -860,6 +882,7 @@ const updateSetting = (setting, value) => {
           }}
           task={editingClient ? currentTask : null}
           currentClient={currentClient}
+          due={settings.defaultTaskDeadline ?? 3}
         />
       )}
 

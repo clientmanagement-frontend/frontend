@@ -23,6 +23,7 @@ const MyRouter = (props) => {
               clients = {props.clients}
               tasks = {props.tasks}
               templates = {props.templates}
+              settings = {props.settings}
 
               setShowAddTask = {props.setShowAddTask}
               setShowAddClient = {props.setShowAddClient}
@@ -78,6 +79,7 @@ const MyRouter = (props) => {
             />} />
             <Route path="documents" element={
               <DocumentBrowser
+                settings = {props.settings}
                 documents = {props.documents}
                 templates = {props.templates}
 

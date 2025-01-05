@@ -81,6 +81,7 @@ export default function Dashboard(props) {
                 )}
                 newDoc={() => {
                     props.createDocument(props.currentTemplate)
+                    navigate("/documents");
                 }}
                 onClick={(doc) => {
                     props.setCurrentDocument(doc);

@@ -27,8 +27,28 @@ const templateSchema = new mongoose.Schema({
 
 const UserSchema = new mongoose.Schema({
     settings: {
-        type: Object
-    },
+        type: Object,
+        default: {
+          useGoogleVoice: true,
+          taskOverviewEmails: "Weekly",
+          autoTaskGeneration: {
+            finishClientDocuments: false,
+            sendClientDocuments: false,
+            finishGeneralDocuments: false,
+            sendGeneralDocuments: false,
+          },
+          googleVoiceAccountIndex: "0",
+          defaultEmailBody: "Hello, I just sent you the $DOCTYPE$.",
+          defaultEmailSubject: "Regarding $DOCNAME$",
+          defaultEmailFooter: "Best Regards,\n$COMPANY$",
+          includeDeadlines: true,
+          upcomingTaskEmails: {
+            oneDay: true,
+            threeDays: false,
+            oneWeek: false,
+          },
+        },
+      },
     notes: {
         type: Object,
     },
