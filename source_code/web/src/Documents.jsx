@@ -68,7 +68,8 @@ const Documents = (props) => {
                     window.innerWidth / 400
                 )})`,
                 scrollSnapAlign: "start",
-                maxWidth: "400px"
+                maxWidth: "400px",
+                minWidth: "300px"
             }}
           >
             <Document

@@ -20,6 +20,9 @@ const MyRouter = (props) => {
           <Route index element={
             <Dashboard 
               user = {props.user}
+              isMobile = {props.isMobile}
+              mobileMenuOpen = {props.mobileMenuOpen}
+              setMobileMenuOpen = {props.setMobileMenuOpen}
               clients = {props.clients}
               tasks = {props.tasks}
               templates = {props.templates}

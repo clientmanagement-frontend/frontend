@@ -57,6 +57,37 @@ const Main = () => {
 
   const [showConfetti, setShowConfetti] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(false);
+  const [ mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  useEffect(() => {
+    // Function to check if the site is opened on a mobile device
+    const checkMobile = () => {
+      // Option 1: Check screen width
+      const isMobileDevice = window.innerWidth <= 768;
+
+      // Option 2: Use navigator.userAgent (less preferred)
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isMobileAgent =
+        /iphone|ipod|android|blackberry|opera mini|iemobile|wpdesktop/.test(userAgent);
+
+      setIsMobile(isMobileDevice || isMobileAgent);
+      if (mobileMenuOpen)
+      setMobileMenuOpen(isMobileDevice || isMobileAgent)
+    };
+
+    // Call checkMobile on component mount
+    checkMobile();
+
+    // Update on window resize
+    window.addEventListener("resize", checkMobile);
+
+    // Cleanup event listener
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
+  }, [mobileMenuOpen]);
+
   const triggerConfetti = () => {
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 4000);
@@ -775,6 +806,9 @@ const updateSetting = (setting, value) => {
 
         // API URL
         host={SERVER_URL}
+        isMobile={isMobile}
+        mobileMenuOpen = {mobileMenuOpen}
+        setMobileMenuOpen = {setMobileMenuOpen}
 
         // User
         user={user}

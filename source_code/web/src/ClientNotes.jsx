@@ -1,10 +1,18 @@
 import React, { useState } from "react";
+import BackButton from "./BackButton";
 
-const ClientNotes = ({ notes, addNote, deleteNote }) => {
+const ClientNotes = ({
+  notes,
+  addNote,
+  deleteNote,
+  isMobile,
+  mobileMenuOpen,
+  setMobileMenuOpen,
+}) => {
   const [search, setSearch] = useState("");
   const [newNote, setNewNote] = useState("");
-  const [editingNote, setEditingNote] = useState(null); // Track the note being edited
-  const [editingContent, setEditingContent] = useState(""); // Track content while editing
+  const [editingNote, setEditingNote] = useState(null);
+  const [editingContent, setEditingContent] = useState("");
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
@@ -26,7 +34,6 @@ const ClientNotes = ({ notes, addNote, deleteNote }) => {
     }
   };
 
-
   const handleEditClick = (note) => {
     setEditingNote(note);
     setEditingContent(note.body);
@@ -41,23 +48,57 @@ const ClientNotes = ({ notes, addNote, deleteNote }) => {
     if (editingContent.trim() === "") {
       deleteNote(editingNote._id);
     } else {
-      addNote({ body: editingContent.trim(), timestamp: editingNote.timestamp, _id: editingNote._id });
+      addNote({
+        body: editingContent.trim(),
+        timestamp: editingNote.timestamp,
+        _id: editingNote._id,
+      });
     }
     handleCancelEdit();
   };
 
+  if (!mobileMenuOpen && isMobile) {
+    return (
+      <button
+        onClick={() => {setMobileMenuOpen(true)}}
+        style={{
+          position: "fixed",
+          bottom: "10px",
+          left: "10px",
+          width: "50px",
+          height: "50px",
+          backgroundColor: "#007bff",
+          color: "#fff",
+          border: "none",
+          borderRadius: "50%",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0px 2px 5px rgba(0, 0, 0, 0.2)",
+          zIndex: 1000
+        }}
+      >
+        ☰
+      </button>
+    );
+  }
+
   return (
     <div
       style={{
+        display: "flex",
         width: "100%",
         height: "100%",
         borderRight: "1px solid #ccc",
         padding: "10px",
         boxSizing: "border-box",
-        display: "flex",
         flexDirection: "column",
       }}
     >
+      {isMobile && mobileMenuOpen && (
+        <BackButton onClick={() => setMobileMenuOpen(false)} />
+      )}
       {/* Search Bar */}
       <div
         style={{
@@ -184,55 +225,54 @@ const ClientNotes = ({ notes, addNote, deleteNote }) => {
       </div>
 
       {/* Input Footer */}
-    <div
-      style={{
-        display: "flex",
-        gap: 10,
-        alignItems: "center",
-        position: "sticky",
-        bottom: 0,
-        padding: "10px 0",
-      }}
-    >
-      <input
-        type="text"
-        className="form-control"
-        placeholder="Type a note..."
-        value={newNote}
-        onChange={(e) => setNewNote(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            handleAddNote();
-          }
-        }}
+      <div
         style={{
-          borderRadius: "15px",
-          flex: 1,
-          height: "40px",
-          border: "1px solid #ccc",
-          padding: "5px 10px",
-          boxSizing: "border-box",
-        }}
-      />
-      <button
-        onClick={handleAddNote}
-        style={{
-          backgroundColor: "#007bff",
-          color: "#fff",
-          border: "none",
-          height: "40px",
-          padding: "0 20px",
-          borderRadius: "15px",
-          cursor: "pointer",
           display: "flex",
+          gap: 10,
           alignItems: "center",
-          justifyContent: "center",
+          position: "sticky",
+          bottom: 0,
+          padding: "10px 0",
         }}
       >
-        Add
-      </button>
-    </div>
-
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Type a note..."
+          value={newNote}
+          onChange={(e) => setNewNote(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleAddNote();
+            }
+          }}
+          style={{
+            borderRadius: "15px",
+            flex: 1,
+            height: "40px",
+            border: "1px solid #ccc",
+            padding: "5px 10px",
+            boxSizing: "border-box",
+          }}
+        />
+        <button
+          onClick={handleAddNote}
+          style={{
+            backgroundColor: "#007bff",
+            color: "#fff",
+            border: "none",
+            height: "40px",
+            padding: "0 20px",
+            borderRadius: "15px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          Add
+        </button>
+      </div>
     </div>
   );
 };

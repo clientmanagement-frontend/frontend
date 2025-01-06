@@ -1,12 +1,12 @@
 import BackButton from "./BackButton";
 
-const ClientView = ({ client, onBack, onEdit }) => {
+const ClientView = ({ client, onBack, onEdit, mobileMenuOpen }) => {
     return (
-        <div style={{ paddingLeft: "20px"}}>
+        <div style={{ paddingLeft: "10px"}}>
             {/* Header with client name and back button */}
-            <div style={{ display: "flex", alignItems: "center"}}>
+            <div>
                 {/* Dynamic Back Button will change to relative on small screens */}
-                <BackButton onClick={onBack} dynamic = {true}/>
+                {!mobileMenuOpen && <BackButton onClick={onBack} dynamic = {true}/>}
                 <div
                     
                 >
@@ -27,7 +27,7 @@ const ClientView = ({ client, onBack, onEdit }) => {
             </div>
 
             <div>
-                {client.address && (<p style = {{padding: 0, margin: 0}}>{client.address}</p>)}
+                {/* {client.address && (<p style = {{padding: 0, margin: 0}}>{client.address}</p>)} */}
                 {/* {client.phone && (<p style = {{padding: 0, margin: 0}}>{client.phone}</p>)}
                 {client.email && (<p style = {{padding: 0, margin: 0}}>{client.email}</p>)} */}
             </div>
