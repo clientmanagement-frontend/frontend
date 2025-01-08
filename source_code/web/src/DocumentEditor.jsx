@@ -1,17 +1,18 @@
 import React, { useState,  useEffect, useCallback } from "react";
 import BackButton from "./BackButton";
-//import { EmbedPDF } from "@simplepdf/react-embed-pdf";
 
 
 
-const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
-  const [fields, setFields] = useState(null); //doc.fields ?? {}
+const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
+  const [fields, setFields] = useState({}); //doc.fields ?? {}
   const [download, setDownload] = useState(false)
   const [selectedClient, setSelectedClient] = useState(doc.client ?? null);
   const [documentName, setDocumentName] = useState(doc.name || "New Document");
   const [documentDesc, setDocumentDesc] = useState(doc.description || "");
   const defaultDeadline = new Date();
   const [pdfUrl, setPdfUrl] = useState(null)
+  const [fieldMap, setFieldMap] = useState(null) // Field name to field object map
+  const [loaded, setLoaded] = useState(false)
 
 
 
@@ -41,7 +42,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
     return pdfDocument
 }, [])
 
-  // Generate PDF URL only when doc.data changes
+  // Generate PDF URL only when doc.data changes, if we're using the viewer OR IF NOT because we need to build the pdf regardless!
   useEffect(() => {
     if (!pdfUrl && doc.data) {
       const pdfBlob = new Blob([doc.data], { type: "application/pdf" });
@@ -58,41 +59,60 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
   
 
   // Pass name to get a field object on the document
-  async function getFieldObjById(doc, id) {
-    var objs = await doc.getFieldObjects();
-    for(var i=0; i<Object.values(objs).length; i++) {
-      // console.log(Object.values(objs)[i][0].name, id)
-        if(Object.values(objs)[i][0].name === id) {
-            return Object.values(objs)[i][0];
-        }
-    }
-  }
+  const getFieldObjById = useCallback(
+    async (doc, id) => {
+      if (fieldMap) {
+        return fieldMap[id];
+      } else {
+        const objs = await doc.getFieldObjects();
+        const newMap = Object.fromEntries(
+          Object.entries(objs).map(([key, value]) => [key, value[0]])
+        );
+        setFieldMap(newMap);
+  
+        return newMap[id];
+      }
+    },
+    [fieldMap, setFieldMap]
+  );
 
   // Queue an update (needs .saveDocument() and to change the useMemo hook thru doc.data bianry blob update)
   // sets the value on a pdf object
   const setFieldValue = useCallback(async(pdf, id, val) => {
+      handleFieldChange(id, val)
+      if (!pdf)
+        return true
 
       var fObject = await getFieldObjById(pdf, id);
       if(!fObject) return false// The requested field does not exist, skip (will not add to state)
       pdf.annotationStorage.setValue(fObject.id, {value: val});
       return true
-  }, [])
+  }, [getFieldObjById])
 
   // Process the list of updates onto the pdf and re-render the document
   const updateFields = useCallback(async (fieldUpdates) => {
     // Set a field on the pdf
+    let pdf = null
+    try
+    {
+      pdf = getDoc()
+    }
+    catch (e)
+    {
+      // No pdf
+    }
+    
     for (const fieldName of Object.keys(fieldUpdates))
-      {
-        setFieldValue(getDoc(), fieldName, fieldUpdates[fieldName])
-        handleFieldChange(fieldName, fieldUpdates[fieldName])
-      }
-  
-      // Update the viewer
-      // Save the modified PDF
-      const newpdf = await getDoc().saveDocument();
-      const pdfBlob = new Blob([newpdf], { type: "application/pdf" });
-      const blob = URL.createObjectURL(pdfBlob);
-      setPdfUrl(blob)
+      await setFieldValue(pdf, fieldName, fieldUpdates[fieldName])
+      
+      
+    if (!pdf) return
+    // Update the viewer
+    // Save the modified PDF
+    const newpdf = await pdf.saveDocument();
+    const pdfBlob = new Blob([newpdf], { type: "application/pdf" });
+    const blob = URL.createObjectURL(pdfBlob);
+    setPdfUrl(blob)
   }, [getDoc, setFieldValue])
   
   // When the client changes, fill the data
@@ -115,8 +135,42 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
     
   }, [selectedClient, setFieldValue, updateFields, clients])
 
+
+  // Get all fields from the loaded PDF
+  const getFields = useCallback(async () => {
+    // If we're on mobile, just return fields
+    try {
+      const pdf = getDoc()
+  
+      const totalPages = pdf.numPages;
+      const updatedFields = {}; // Object to store updated fields and their values
+  
+      for (let i = 1; i <= totalPages; i++) {
+        const page = await pdf.getPage(i);
+        const annotations = await page.getAnnotations();
+  
+        // Update fields and collect field values
+        annotations.forEach(async (annotation) => {
+          if (annotation.fieldName) 
+            updatedFields[annotation.fieldName] = annotation.fieldValue;
+  
+        });
+      }
+
+
+      return updatedFields; // Return all fields with their updated values
+    } catch (error) {
+      // Likely because we are on mobile. Return state fields
+      // As of our latest update, this isn't true. Even if on mobile, we extract from the pdf
+      return fields
+    }
+  }, [fields, getDoc])
+
+
+
   // When the document loads, get the field data from the pdf
   useEffect(() => {
+    if (loaded) return
     
     // Differs from updateFields because this will gather a list of all fields
     // in the document, returning them to be set in state for mobile use.
@@ -124,7 +178,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
     const updateAndListPdfFields = async (fieldUpdates) => {
       try {
         const pdf = getDoc()
-    
+        
         const totalPages = pdf.numPages;
         const updatedFields = {}; // Object to store updated fields and their values
     
@@ -133,32 +187,41 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
           const annotations = await page.getAnnotations();
     
           // Update fields and collect field values
-          annotations.forEach((annotation) => {
+          annotations.forEach(async (annotation) => {
             if (annotation.fieldName) {
               // Update field value if it exists in the fieldUpdates list AND if the value is currently empty
               // (it is autofill, not autoreplace)
               
               if (fieldUpdates.hasOwnProperty(annotation.fieldName) && (!annotation.fieldValue )) {
-                 if (setFieldValue(pdf, annotation.fieldName, fieldUpdates[annotation.fieldName]))
+                 if (await setFieldValue(pdf, annotation.fieldName, fieldUpdates[annotation.fieldName]))
                     updatedFields[annotation.fieldName] = fieldUpdates[annotation.fieldName]
                  else console.error("Broken field on pdf:", annotation.fieldName)
               }
               // Add to the updated fields object
-              else updatedFields[annotation.fieldName] = annotation.fieldValue;
-    
+              else 
+              {
+                updatedFields[annotation.fieldName] = annotation.fieldValue;
+                handleFieldChange(annotation.fieldName, annotation.fieldValue)
+              }
             }
           });
         }
 
-        // Save the modified PDF
-        const newpdf = await pdf.saveDocument();
-        const pdfBlob = new Blob([newpdf], { type: "application/pdf" });
-        const blob = URL.createObjectURL(pdfBlob);
-        setPdfUrl(blob)
+        // Save the modified PDF if any fields changed
+        if (pdf.annotationStorage)
+        {
+          const newpdf = await pdf.saveDocument();
+          const pdfBlob = new Blob([newpdf], { type: "application/pdf" });
+          const blob = URL.createObjectURL(pdfBlob);
+          setPdfUrl(blob)
+        }
+        setLoaded(true)
+        
 
         return updatedFields; // Return all fields with their updated values
       } catch (error) {
-        console.log(error)
+        // We're probably not loaded yet
+
         return null
       }
     };
@@ -201,8 +264,8 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
         // call setFieldValue function. We DONT need to save modifications with .saveDocument(), because we won't be viewing
         // a pdf iframe that we need to refresh. .saveDocument() will be called from the Save Draft / Complete buttons 
         //, the saveDocument() function on this component will trigger the loading of the updated annotations.
-        else if (!fields) setFields(updatedFields)
-        else return
+        // else if (!fields) setFields(updatedFields)
+        // else return
       })
 
       .catch((e) => {
@@ -210,16 +273,18 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
       })
 
     }
+    // Only try once the document is loaded,
+    if (pdfUrl)
     tryGetFields()
 
     
-  }, [doc, fields, setFieldValue, getDoc])
+  }, [doc,  setFieldValue, getDoc, pdfUrl, getFields, updateFields, loaded])
 
   // We got the fields
   useEffect(() => {
     if (fields)
     {
-      console.log(fields)
+      //console.log(fields)
       // We can use these fields however we want ...
       
     }
@@ -236,6 +301,11 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
   const saveDocument = async (complete) => {
     try {
       const pdfDocument = getDoc()
+      // If we're not using the viewer, we need to populate the pdf first.
+      if (!useViewer)
+        for (const fieldName of Object.keys(fields))
+          await setFieldValue(pdfDocument, fieldName, fields[fieldName])
+      
 
       // Extract the updated data from the PDF viewer
       const pdfBlob = await pdfDocument.saveDocument();
@@ -245,7 +315,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
         _id: doc._id,
         name: documentName,
         description: documentDesc,
-        fields,
+        fields: getFields(), // If we're on desktop, we need to get fields from the iframe.
         templateId: doc.templateId,
         client: selectedClient,
         data: Array.from(pdfArrayBuffer),
@@ -303,11 +373,6 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
               
             }}
           ></iframe>
-        //   <EmbedPDF companyIdentifier="viewer"
-        //     mode="inline"
-        //     style={{ width: 900, height: 800 }}
-        //     documentURL={pdfUrl}
-        // />
         )}
       </div>
 
@@ -388,7 +453,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients }) => {
 
 
           <form>
-          { false && fields && Object.entries(fields).map(([key, value]) => (
+          { !useViewer && fields && Object.entries(fields).map(([key, value]) => (
             <div className="form-floating mb-3" key={key}>
                 {key.includes("date") ? (
                 <input

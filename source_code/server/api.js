@@ -14,7 +14,6 @@
   const { Storage } = require('megajs')
   const multer = require('multer');
   const fs = require('fs');
-  const { PDFDocument } = require('pdf-lib');
   const pdf = require('pdf-parse');
 
 
