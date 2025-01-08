@@ -10,6 +10,18 @@ import Documents from "./Documents";
 export default function Dashboard(props) {
     const navigate = useNavigate();
   
+    function getGreeting() {
+        const currentHour = new Date().getHours(); // Get the current hour in 24-hour format
+      
+        if (currentHour >= 5 && currentHour < 12) {
+          return "Good morning";
+        } else if (currentHour >= 12 && currentHour < 18) {
+          return "Good afternoon";
+        } else {
+          return "Good evening";
+        }
+      }
+
     return (
       <div
         style={{
@@ -59,6 +71,7 @@ export default function Dashboard(props) {
             overflow: "hidden", // Prevent scrolling
           }}
         >
+            {!props.currentClient && <h1 style = {{paddingLeft: 10, fontWeight: 100}}>{getGreeting()}{props.user.name ? ", " : ""}{props.user.name || ""}</h1>}
           {!props.currentClient && (
             <div style = {{display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-around"}}>
               <Tasks
@@ -134,7 +147,7 @@ export default function Dashboard(props) {
                   />
                   <Tasks
                     title={
-                      true
+                      false
                         ? "Tasks"
                         : `${props.currentClient.name.substring(
                             0,

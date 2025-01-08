@@ -89,8 +89,12 @@ const Main = () => {
   }, [mobileMenuOpen]);
 
   const triggerConfetti = () => {
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 4000);
+    if (!showConfetti)
+    {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 4000);
+    }
+    
   };
 
   // Filter documents by search and current template
@@ -270,14 +274,13 @@ const addNote = (note) => {
     if (doc._id) {
       setDocuments((prev) => prev.map((d) => d._id === doc._id ? doc : d));
     }
+    
 
     axios.post(`${SERVER_URL}/save-document`, formData)
     .then((response) => {
 
       // Get the updated document: the server may have added an ID, completed status, etc.
       doc = response.data.doc;
-
-
 
       // Success
       // Update the document in state variable, or add to state if it didnt exist

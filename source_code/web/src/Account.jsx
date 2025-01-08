@@ -7,6 +7,7 @@ const Account = (props) => {
   const settings = props.settings ?? {};
 
   const [company, setCompany] = useState(props.user.company || "");
+  const [name, setName] = useState(props.user.name || "")
   const [password, setPassword] = useState("");
   const [newpass1, setNewpass1] = useState("");
   const [newpass2, setNewpass2] = useState("");
@@ -56,6 +57,7 @@ const Account = (props) => {
     const data = {
       newpass: newpass1,
       newcompanyname: company,
+      newname: name,
       password: password,
       uid: localStorage.getItem("token"),
     };
@@ -158,7 +160,8 @@ const Account = (props) => {
         }}
       >
         <h2 className="title">MODIFY ACCOUNT</h2>
-        <form onSubmit={updateAccount}>
+              
+              <form onSubmit={updateAccount} autoComplete="off">
           {/* Company Name Input */}
           <div className="form-group">
             <label style={{ marginLeft: "5px", color: "gray" }}>Company Name</label>
@@ -173,19 +176,20 @@ const Account = (props) => {
             />
           </div>
 
-          {/* Password Input */}
           <div className="form-group">
-            <label style={{ marginLeft: "5px", color: "gray" }}>Password</label>
+            <label style={{ marginLeft: "5px", color: "gray" }}>My Name</label>
             <input
               style={{ margin: "5px" }}
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               className="form-control"
-              id="passwordInput"
-              placeholder="Enter password"
+              placeholder="Enter name"
+              autoComplete="new-password"
             />
           </div>
+
+          
 
           {/* New Password Input */}
           <div className="form-group">
@@ -198,6 +202,7 @@ const Account = (props) => {
               className="form-control"
               id="newpass1Input"
               placeholder="Enter new password"
+              autoComplete="new-password"
             />
           </div>
 
@@ -214,6 +219,20 @@ const Account = (props) => {
               className="form-control"
               id="newpass2Input"
               placeholder="Confirm new password"
+            />
+          </div>
+
+          {/* Password Input */}
+          <div className="form-group">
+            <label style={{ marginLeft: "5px", color: "gray" }}>Password</label>
+            <input
+              style={{ margin: "5px" }}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="form-control"
+              id="passwordInput"
+              placeholder="Enter pwd to change details"
             />
           </div>
 

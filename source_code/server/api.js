@@ -90,7 +90,7 @@ const pingUrl = () => {
 
 cron.schedule('*/10 * * * *', pingUrl);
 pingUrl();
-maintainUsers()
+// maintainUsers()
 
 const moment = require("moment");
 
@@ -1599,19 +1599,20 @@ function verifyUser(uid, password) {
 }
 
 router.post('/update-account', (req, res) => {
-  const { uid, password, newpass, newcompanyname } = req.body;
+  const { uid, password, newpass, newcompanyname, newname } = req.body;
 
   verifyUser(uid, password)
     .then((user) => {
 
       // Cancel if nothing will change
-      if (!newpass && newcompanyname === user.company) {
+      if (!newpass && (newcompanyname === user.company) && (newname ===user.name)) {
         return res.status(400).send({ message: "No changes provided" });
       }
 
       // Prepare the fields to update
       const updateFields = {};
       if (newcompanyname) updateFields.company = newcompanyname;
+      if (newname) updateFields.name = newname
 
       // Hash the new password if provided
       if (newpass) {

@@ -41,7 +41,7 @@ const UserSchema = new mongoose.Schema({
           googleVoiceAccountIndex: "0",
           defaultEmailBody: "Hello $CLIENT$, I just sent you the $DOCTYPE$.",
           defaultEmailSubject: "Regarding $DOCNAME$",
-          defaultEmailFooter: "Best Regards,\n$COMPANY$",
+          defaultEmailFooter: "Best Regards,\n$ME$\n\n$COMPANY$",
           includeDeadlines: true,
           upcomingTaskEmails: {
             oneDay: true,
@@ -67,6 +67,11 @@ tasks: {
 company: {
     type: String,
     maxlength: [100, "Company name too long"]
+},
+
+name: {
+    type: String,
+    maxlength: [100, " name too long"]
 },
     
 email: {
