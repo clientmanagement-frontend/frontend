@@ -1,4 +1,4 @@
-import React, { useState,  useEffect, useCallback } from "react";
+import React, { useState,  useEffect, useCallback} from "react";
 import BackButton from "./BackButton";
 
 
@@ -7,18 +7,26 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
   const [fields, setFields] = useState({}); //doc.fields ?? {}
   const [download, setDownload] = useState(false)
   const [selectedClient, setSelectedClient] = useState(doc.client ?? null);
-  const [documentName, setDocumentName] = useState(doc.name || "New Document");
+  const [documentName, setDocumentName] = useState((doc.name?.indexOf("🤔") > -1 ? "New Document" : doc.name) || "New Document");
   const [documentDesc, setDocumentDesc] = useState(doc.description || "");
   const defaultDeadline = new Date();
   const [pdfUrl, setPdfUrl] = useState(null)
   const [fieldMap, setFieldMap] = useState(null) // Field name to field object map
   const [loaded, setLoaded] = useState(false)
 
+  
 
 
   defaultDeadline.setDate(defaultDeadline.getDate() + 7);
 
-  const [deadline, setDeadline] = useState(doc._id ? (doc.completed ? "" : doc.deadline ): defaultDeadline.toISOString().split('T')[0]);
+  const [deadline, setDeadline] = useState(doc._id ? (doc.deadline ): defaultDeadline.toISOString().split('T')[0]);
+
+  const [fieldGroupsBoxes, setFieldGroupsBoxes] = useState({});
+  const [fieldGroupsRadios, setFieldGroupsRadios] = useState({});
+
+  const [fieldData, setFieldData] = useState(null);
+
+  
 
 
   // Get the document that is currently loaded
@@ -41,6 +49,8 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
     }
     return pdfDocument
 }, [])
+
+
 
   // Generate PDF URL only when doc.data changes, if we're using the viewer OR IF NOT because we need to build the pdf regardless!
   useEffect(() => {
@@ -66,7 +76,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
       } else {
         const objs = await doc.getFieldObjects();
         const newMap = Object.fromEntries(
-          Object.entries(objs).map(([key, value]) => [key, value[0]])
+          Object.entries(objs).map(([key, value]) => [key, value[value.length - 1]])
         );
         setFieldMap(newMap);
   
@@ -76,21 +86,70 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
     [fieldMap, setFieldMap]
   );
 
-  // Queue an update (needs .saveDocument() and to change the useMemo hook thru doc.data bianry blob update)
-  // sets the value on a pdf object
-  const setFieldValue = useCallback(async(pdf, id, val) => {
-      handleFieldChange(id, val)
-      if (!pdf)
-        return true
+  useEffect(() => {
+    const fetchFieldData = async () => {
+      if (!fields || useViewer) return;
+  
+      const newFieldGroupsRadios = {};
+      const newFieldGroupsBoxes = {};
 
-      var fObject = await getFieldObjById(pdf, id);
-      if(!fObject) return false// The requested field does not exist, skip (will not add to state)
-      pdf.annotationStorage.setValue(fObject.id, {value: val});
-      return true
-  }, [getFieldObjById])
+      const newFieldData = {};
+  
+      for (const [key, value] of Object.entries(fields)) {
+        const fieldObj = await getFieldObjById(getDoc(), key);
+        const fieldType = fieldObj?.type;
+        const fieldName = key.split(":")[0]; // Extract group name for radios
+  
+        if (fieldType === "text" || fieldType === "combobox" || ( (fieldType === "checkbox" || fieldType === "radiobutton") && !key.includes(":"))) {
+          newFieldData[key] = { fieldType, fieldObj, value: value };
+        } 
+        
+        else if (fieldType === "radiobutton" && key.includes(":")) {
+          const group = key.startsWith("$")
+            ? key.slice(1).split(":")[0]
+            : fieldName; // Handle $Group format
+          const option = key.split(":")[1];
+          const isChecked = value === "On";
+  
+          if (!newFieldGroupsRadios[group]) {
+            newFieldGroupsRadios[group] = [];
+          }
+          newFieldGroupsRadios[group].push({ key, option, isChecked });
+        }
+
+        else if (fieldType === "checkbox" && key.includes(":")) {
+          const group = key.startsWith("$")
+            ? key.slice(1).split(":")[0]
+            : fieldName; // Handle $Group format
+          const option = key.split(":")[1];
+          const isSingleSelect = key.startsWith("$");
+          const isChecked = value;
+  
+          if (!newFieldGroupsBoxes[group]) {
+            newFieldGroupsBoxes[group] = [];
+          }
+          newFieldGroupsBoxes[group].push({ key, option, isChecked, isSingleSelect });
+        }
+
+
+        else
+        {
+          console.log("Unsupported type: ", fieldType)
+        }
+      }
+  
+      setFieldGroupsBoxes(newFieldGroupsBoxes);
+      setFieldGroupsRadios(newFieldGroupsRadios);
+      setFieldData(newFieldData);
+      console.log(newFieldData)
+    };
+  
+    fetchFieldData();
+  }, [fields, useViewer, getDoc, getFieldObjById]);
 
   // Process the list of updates onto the pdf and re-render the document
-  const updateFields = useCallback(async (fieldUpdates) => {
+  // Skip state is called if updateFields is called through handleFieldChange (if a date was changed, we call updateFields, and dont need to update state, because handleFieldChange already did this.)
+  const updateFields = useCallback(async (fieldUpdates, skipState) => {
     // Set a field on the pdf
     let pdf = null
     try
@@ -101,11 +160,21 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
     {
       // No pdf
     }
+
     
     for (const fieldName of Object.keys(fieldUpdates))
-      await setFieldValue(pdf, fieldName, fieldUpdates[fieldName])
+    {
+      if (!skipState) setFields((prev) => ({ ...prev, [fieldName]: fieldUpdates[fieldName] }));
+      if (!pdf)
+        break
+
+      var fObject = await getFieldObjById(pdf, fieldName);
+      if(!fObject) continue
+      await pdf.annotationStorage.setValue(fObject.id, {value: fieldUpdates[fieldName]});
+    }
       
-      
+   
+    
     if (!pdf) return
     // Update the viewer
     // Save the modified PDF
@@ -113,32 +182,74 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
     const pdfBlob = new Blob([newpdf], { type: "application/pdf" });
     const blob = URL.createObjectURL(pdfBlob);
     setPdfUrl(blob)
-  }, [getDoc, setFieldValue])
+  }, [getDoc, getFieldObjById])
+
+  // Handle field input changes
+  const handleFieldChange = useCallback( async (key, value, date) => {
+    // console.log(key, value, date)
+    const obj = await getFieldObjById(getDoc(), key)
+    if (value == null) value = obj.fieldType === "radiobutton" ? "Off" : obj.fieldType === "checkbox" ? false : ""
+
+    value = Array.isArray(value) ? value[0] : value;
+
+    if (!date) setFields((prev) => ({ ...prev, [key]: value}))
+    
+    // If its a date, update on the pdf
+    else
+      {
+      setFields((prev) => ({ ...prev, [key]: value.split("-").reverse().join("-").replace(/^(\d{2})-(\d{2})-(\d{4})$/, '$2-$1-$3').replace(/-/g, "/")}))
+
+        updateFields({[key]: value.split("-").reverse().join("-").replace(/^(\d{2})-(\d{2})-(\d{4})$/, '$2-$1-$3').replace(/-/g, "/")
+
+        
+    }, true)
+
+  }
+
+    
+  },[updateFields, getDoc, getFieldObjById]);
+
+   // Queue an update (needs .saveDocument() and to change the useMemo hook thru doc.data bianry blob update)
+  // sets the value on a pdf object
+  const setFieldValue = useCallback(async(pdf, id, val) => {
+    handleFieldChange(id, val)
+    if (!pdf)
+      return true
+
+    var fObject = await getFieldObjById(pdf, id);
+    if(!fObject) return false// The requested field does not exist, skip (will not add to state)
+    pdf.annotationStorage.setValue(fObject.id, {value: val});
+    return true
+}, [getFieldObjById, handleFieldChange])
+
+ 
+
+  
   
   // When the client changes, fill the data
-  useEffect(() => {
-    if (selectedClient)
-    {
+  const handleClientChange = (client) => {
+    
+    setSelectedClient(client)
       // const client = clients.find(c => c._id === selectedClient)
       let fieldUpdates = {}
     
       // Can change these to objects with a value and force property, if we want to control whether to replace existing.
-      fieldUpdates["Client Name"] = selectedClient.name
-      fieldUpdates["Client Address"] = selectedClient.address
-      fieldUpdates["Client Phone"] = selectedClient.phone
-      fieldUpdates["Client Email"] = selectedClient.email
+      fieldUpdates["Client Name"] = client?.name || ""
+      fieldUpdates["Client Address"] = client?.address || ""
+      fieldUpdates["Client Phone"] = client?.phone || ""
+      fieldUpdates["Client Email"] = client?.email || ""
 
       updateFields(fieldUpdates)
 
-    }
     
     
-  }, [selectedClient, setFieldValue, updateFields, clients])
+    
+  }
 
 
   // Get all fields from the loaded PDF
   const getFields = useCallback(async () => {
-    // If we're on mobile, just return fields
+    
     try {
       const pdf = getDoc()
   
@@ -153,6 +264,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
         annotations.forEach(async (annotation) => {
           if (annotation.fieldName) 
             updatedFields[annotation.fieldName] = annotation.fieldValue;
+
   
         });
       }
@@ -177,8 +289,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
     // Will also perform the default auto-fill updates.
     const updateAndListPdfFields = async (fieldUpdates) => {
       try {
-        const pdf = getDoc()
-        
+        const pdf = getDoc();
         const totalPages = pdf.numPages;
         const updatedFields = {}; // Object to store updated fields and their values
     
@@ -186,45 +297,55 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
           const page = await pdf.getPage(i);
           const annotations = await page.getAnnotations();
     
-          // Update fields and collect field values
-          annotations.forEach(async (annotation) => {
+          // Use a for...of loop to properly await async operations
+          for (const annotation of annotations) {
             if (annotation.fieldName) {
               // Update field value if it exists in the fieldUpdates list AND if the value is currently empty
               // (it is autofill, not autoreplace)
-              
-              if (fieldUpdates.hasOwnProperty(annotation.fieldName) && (!annotation.fieldValue )) {
-                 if (await setFieldValue(pdf, annotation.fieldName, fieldUpdates[annotation.fieldName]))
-                    updatedFields[annotation.fieldName] = fieldUpdates[annotation.fieldName]
-                 else console.error("Broken field on pdf:", annotation.fieldName)
-              }
-              // Add to the updated fields object
-              else 
-              {
-                updatedFields[annotation.fieldName] = annotation.fieldValue;
-                handleFieldChange(annotation.fieldName, annotation.fieldValue)
+              if (
+                fieldUpdates.hasOwnProperty(annotation.fieldName) &&
+                !annotation.fieldValue
+              ) {
+                const success = await setFieldValue(
+                  pdf,
+                  annotation.fieldName,
+                  fieldUpdates[annotation.fieldName]
+                );
+                if (success) {
+                  updatedFields[annotation.fieldName] = fieldUpdates[annotation.fieldName];
+                } else {
+                  console.error("Broken field on pdf:", annotation.fieldName);
+                }
+              } else {
+                // Add to the updated fields object
+                updatedFields[annotation.fieldName] =   annotation.checkBox ? (annotation.fieldValue === "Off" ? false : true) : annotation.fieldValue //annotation.radioButton? annotation.fieldValue : annotation.fieldValue;
+                handleFieldChange(annotation.fieldName, annotation.checkBox ? (annotation.fieldValue === "Off" ? false : true) : annotation.fieldValue);
+                // console.log(annotation)
               }
             }
-          });
+          } 
         }
-
-        // Save the modified PDF if any fields changed
-        if (pdf.annotationStorage)
+    
+        setLoaded(true);
+    
+        if (pdf.annotationStorage.getModified())
         {
+          // Save the modified PDF if any fields changed
           const newpdf = await pdf.saveDocument();
           const pdfBlob = new Blob([newpdf], { type: "application/pdf" });
           const blob = URL.createObjectURL(pdfBlob);
-          setPdfUrl(blob)
-        }
-        setLoaded(true)
-        
+          setPdfUrl(blob);
 
+        }
+        
+    
         return updatedFields; // Return all fields with their updated values
       } catch (error) {
-        // We're probably not loaded yet
-
-        return null
+        //console.error("Error updating and listing PDF fields:", error);
+        return null;
       }
     };
+    
 
     function getCurrentDate() {
       const date = new Date();
@@ -278,7 +399,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
     tryGetFields()
 
     
-  }, [doc,  setFieldValue, getDoc, pdfUrl, getFields, updateFields, loaded])
+  }, [doc,  setFieldValue, getDoc, pdfUrl, getFields, updateFields, loaded, handleFieldChange])
 
   // We got the fields
   useEffect(() => {
@@ -292,10 +413,36 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
 
   }, [fields])
 
-  // Handle field input changes
-  const handleFieldChange = (key, value) => {
-    setFields((prev) => ({ ...prev, [key]: value }));
-  };
+  
+  // If we expand the view to see the viewer, load the changes
+  useEffect(() => {
+    if (loaded && useViewer) 
+    {
+
+      async function refreshPdf()
+      {
+        const pdfDocument = getDoc()
+      // If we're not using the viewer, we need to populate the pdf first.
+      if (!useViewer)
+        for (const fieldName of Object.keys(fields))
+        {
+          await setFieldValue(pdfDocument, fieldName, fields[fieldName])
+        }
+      
+
+      // Extract the updated data from the PDF viewer
+      const newpdf = await pdfDocument.saveDocument();
+      const pdfBlob = new Blob([newpdf], { type: "application/pdf" });
+      const blob = URL.createObjectURL(pdfBlob);
+      setPdfUrl(blob)
+
+      }
+      refreshPdf()
+      
+
+    }
+
+  }, [loaded, useViewer, getDoc, setFieldValue, fields])
 
   // Save the document
   const saveDocument = async (complete) => {
@@ -304,7 +451,9 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
       // If we're not using the viewer, we need to populate the pdf first.
       if (!useViewer)
         for (const fieldName of Object.keys(fields))
+        {
           await setFieldValue(pdfDocument, fieldName, fields[fieldName])
+        }
       
 
       // Extract the updated data from the PDF viewer
@@ -353,22 +502,119 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
     doc._id ? saveDoc({ _id: doc._id }, true, false) : onBack();
   };
 
-  
+  // Convert input to a valid month datatype
+// Convert input to a valid month datatype
+// Convert input to a valid month datatype
+function inputToDate(input) {
+  // Clean input: remove whitespace and standardize separators (either / or -)
+  input = input.replace(/-/g, '/').replace(/\s+/g, ' ').replace(/[-]/g, '/').trim();
+
+  // Month names mapping
+  const monthNames = {
+      "january": 0, "jan": 0, "february": 1, "feb": 1, "march": 2, "mar": 2,
+      "april": 3, "apr": 3, "may": 4, "june": 5, "jun": 5, "july": 6, "jul": 6,
+      "august": 7, "aug": 7, "september": 8, "sep": 8, "october": 9, "oct": 9,
+      "november": 10, "nov": 10, "december": 11, "dec": 11
+  };
+
+  // Match formats: mm/dd/yyyy, mm/dd, m/dd, mm/d, m/d
+  const numericDateRegex = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/;
+  const currentYear = new Date().getFullYear();
+
+  // Check if the date matches numeric format (mm/dd/yy or mm/dd/yyyy)
+  let match = input.match(numericDateRegex);
+  if (match) {
+      let month = parseInt(match[1], 10); // First part - month
+      let day = parseInt(match[2], 10); // Second part - day
+      let year = match[3] ? parseInt(match[3], 10) : currentYear; // Use current year if missing
+
+      month = month - 1; // JS months are zero-based (0 for January, 1 for February)
+
+      // Handle 2-digit year logic
+      if (year < 100) {
+          if (year > currentYear % 100) {
+              year += 1900;
+          } else {
+              year += 2000;
+          }
+      }
+
+      return new Date(year, month, day).toISOString().split('T')[0];
+  }
+
+  // Match formats like "month day, year" or "month day"
+  const monthDayYearRegex = /^([a-zA-Z]+)\s+(\d{1,2})(?:,?\s+(\d{2,4}))?$/;
+
+  // Handle month-day-year format like "Jan 16, 2020" or "January 16"
+  match = input.match(monthDayYearRegex);
+  if (match) {
+      let month = match[1].toLowerCase();
+      const day = parseInt(match[2], 10);
+      let year = match[3] ? parseInt(match[3], 10) : currentYear;
+
+      if (monthNames[month] !== undefined) {
+          month = monthNames[month]; // Get month index (0 for January, 1 for February, etc.)
+      } else {
+          console.error("Invalid month name:", month);
+          return new Date().toISOString().split('T')[0];
+      }
+
+      // Handle 2-digit year logic
+      if (year < 100) {
+          if (year > currentYear % 100) {
+              year += 1900;
+          } else {
+              year += 2000;
+          }
+      }
+
+      return new Date(year, month, day).toISOString().split('T')[0];
+  }
+
+  // Match formats like "m-d-yyyy", "m-d", "m-d-yy"
+  const hyphenDateRegex = /^(\d{1,2})-(\d{1,2})(?:-(\d{2,4}))?$/;
+  match = input.match(hyphenDateRegex);
+  if (match) {
+      let month = parseInt(match[1], 10);
+      let day = parseInt(match[2], 10);
+      let year = match[3] ? parseInt(match[3], 10) : currentYear;
+
+      month = month - 1; // JS months are zero-based
+
+      // Handle 2-digit year logic
+      if (year < 100) {
+          if (year > currentYear % 100) {
+              year += 1900;
+          } else {
+              year += 2000;
+          }
+      }
+
+      return new Date(year, month, day).toISOString().split('T')[0];
+  }
+
+  // If the input doesn't match any format, return today's date
+  //console.log("Invalid date format:", input);
+  return new Date().toISOString().split('T')[0];
+}
+
+
+
 
   
-  
+
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       <BackButton onClick={onBack} />
 
       {/* Left: PDF Viewer */}
-      <div style={{ flex: 2, padding: "10px", borderRight: "1px solid #ccc" }}>
+      <div style={{  display: useViewer? "inline-block" : "none", flex: 2, padding: "10px", borderRight: "1px solid #ccc" }}>
         {pdfUrl && (
           <iframe
             title="PDF Viewer"
             src={`/pdfjs/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`}
-            style={{ width: "100%", height: "100%", border: "none" }}
+            style={{ width: "100%", height: "100%", border: "none"}}
             onLoad = {() => {
               
             }}
@@ -384,9 +630,11 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
           justifyContent: "space-between",
           display: "flex",
           flexDirection: "column",
+          marginLeft: 20,
+          marginRight: 20
         }}
       >
-        <div>
+        <div >
           <div className="form-floating mb-3">
             <input
               type="text"
@@ -407,7 +655,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
                   value={selectedClient?._id || ""}
                   onChange={(e) => {
                     const client = clients.find((c) => c._id === e.target.value);
-                    setSelectedClient(client || null);
+                    handleClientChange(client || null);
                   }}
                   aria-label="For"
                 >
@@ -422,7 +670,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
                 <label htmlFor="client">For</label>
             </div>
 
-            {doc.completed && (
+            {!doc.completed && (
             <div className="form-floating mb-3">
                 <input
                 type="date"
@@ -451,20 +699,28 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
 
           <hr></hr>
 
-
-          <form>
-          { !useViewer && fields && Object.entries(fields).map(([key, value]) => (
+          <div style = {{overflowY: "auto"}}>
+          <form >
+            {/* Whether on mobile or desktop, render date fields */}
+          {fields && Object.entries(fields).filter(([key,value]) => key.toLowerCase().includes("date") || key.toLowerCase().includes("deadline")).map(([key, value]) => (
+            
             <div className="form-floating mb-3" key={key}>
-                {key.includes("date") ? (
                 <input
                     type="date"
                     className="form-control"
                     id={key}
-                    value={value}
-                    onChange={(e) => handleFieldChange(key, e.target.value)}
+                    value={inputToDate(value)}
+                    onChange={(e) => handleFieldChange(key, e.target.value, true)}
                     placeholder={key}
                 />
-                ) : (
+                
+                <label htmlFor={key}>{key}</label>
+            </div>
+            ))}
+
+            {/* If we're on mobile, render all other fields */}
+          {/* {fields && !useViewer && Object.entries(fields).filter(([key,value]) => !key.toLowerCase().includes("date")).map(([key, value]) => (
+            <div className="form-floating mb-3" key={key}>
                 <input
                     type="text"
                     className="form-control"
@@ -473,13 +729,128 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
                     onChange={(e) => handleFieldChange(key, e.target.value)}
                     placeholder={key}
                 />
-                )}
+                
                 <label htmlFor={key}>{key}</label>
             </div>
-            ))}
+            ))} */}
+        {fieldData &&
+        !useViewer &&
+        Object.entries(fieldData).map(([key, { fieldType, fieldObj, value }]) => {
+          if (key.toLowerCase().includes("date") || key.toLowerCase().includes("deadline")) return null
+
+
+          if (fieldType === "text") {
+            // Render text input field
+            return (
+              <div className="form-floating mb-3" key={key}>
+                <input
+                  type="text"
+                  className="form-control"
+                  id={key}
+                  value={value}
+                  onChange={(e) => handleFieldChange(key, e.target.value)}
+                  placeholder={key}
+                />
+                <label htmlFor={key}>{key}</label>
+              </div>
+            );
+          } else if (fieldType === "combobox") {
+            // Render dropdown field
+            const options = fieldObj?.items.map((i) => i.displayValue) || []; // Get dropdown options
+            return (
+              <div className="form-floating mb-3" key={key}>
+                <select
+                  className="form-select"
+                  id={key}
+                  value={value}
+                  onChange={(e) => handleFieldChange(key, e.target.value)}
+                >
+                  {options.map((option, idx) => (
+                    <option key={idx} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <label htmlFor={key}>{key}</label>
+              </div>
+            );
+          } else {
+            return null; // Unsupported field types
+          }
+        })}
+  
+        {/* Radios */}
+        {fieldGroupsRadios &&
+        !useViewer && Object.entries(fieldGroupsRadios).map(([group, radios]) => (
+          <div key={group} className="mb-3">
+            <label className="form-label">{group}</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+              {radios.map(({ key, option, isChecked}) => (
+                <div key={key} className="form-check">
+                  <input
+                    type="radio"
+                    className="form-check-input"
+                    id={key}
+                    name={group} // Group radios together
+                    checked={isChecked}
+                    onChange={() => {
+                      // all others mut become unchecked (radio logic)
+                      radios.forEach((radio) => {
+                        handleFieldChange(
+                          radio.key,
+                          radio.key === key ? "On" : "Off"
+                        );
+                      });
+                    }}
+                  />
+                  <label htmlFor={key} className="form-check-label">
+                    {option}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Checkboxes */}
+        {fieldGroupsBoxes &&
+        !useViewer && Object.entries(fieldGroupsBoxes).map(([group, checkboxes]) => (
+          <div key={group} className="mb-3">
+            <label className="form-label">{group}</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+              {checkboxes.map(({ key, option, isChecked, isSingleSelect }) => (
+                <div key={key} className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id={key}
+                    name={group} // Group radios together
+                    checked={isChecked}
+                    onChange={() => {
+                      // Handle single selection
+                      if (isSingleSelect) {
+                        checkboxes.forEach((checkbox) => {
+                          handleFieldChange(
+                            checkbox.key,
+                            checkbox.key === key && !isChecked ? true : false
+                          );
+                        });
+                      } else {
+                        handleFieldChange(key, isChecked ? false : true);
+                      }
+                    }}
+                  />
+                  <label htmlFor={key} className="form-check-label">
+                    {option}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
 
           </form>
-
+          </div>
           
 
           
@@ -487,7 +858,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 5 }}>
           <button disabled={!doc.data} className="btn btn-dark mt-3" onClick={deleteDoc}>
-            {doc.completed ? "Delete" : "Discard Draft"}
+            {doc.completed ? "Delete" : "Discard"}
           </button>
 
 
@@ -508,7 +879,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
               </div>
 
             <button disabled={!doc.data} className="btn btn-secondary mt-3" onClick={() => saveDocument(false)}>
-              {doc.completed ? "Mark Incomplete" : "Save Draft"}
+              {doc.completed ? "Mark Incomplete" : "Save"}
             </button>
 
             

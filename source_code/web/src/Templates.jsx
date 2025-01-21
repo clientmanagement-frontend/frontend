@@ -24,7 +24,32 @@ const Templates = (props) => {
                     }}
                     />
             </div>
-            {templates?.length >= 0    && (
+            {templates?.length < 1 && (
+                <div
+                style={{
+                    display: "flex",
+                    overflowX: "auto",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                    WebkitScrollbar: "none",
+                    scrollSnapType: "x mandatory",
+                }}
+            >
+                <div
+                style={{
+                    flex: `0 0 calc(100% / ${Math.floor(
+                        window.innerWidth / 400
+                    )})`,
+                    scrollSnapAlign: "start",
+                    maxWidth: 400
+                }}
+            >
+                <Template template={{name: "No templates yet", description: "Click to create your first template", noTemplates: true}} onCreate={() => props.setShowAddTemplate(true)} onEdit={() => {} } />
+
+            </div>
+            </div>
+            )}
+            {templates?.length > 0    && (
             <div
                 style={{
                     display: "flex",

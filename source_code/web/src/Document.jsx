@@ -29,9 +29,10 @@ export default function Document({ doc, onClick, onComplete, onSend }) {
           }}
         >
           <h3 style={{ margin: 0, fontSize: "18px"}}>{doc.name}</h3>
-          <p style={{ fontSize: "14px", color: "#888", margin: 0 }}>
+          {!doc.noDocs && (<p style={{ fontSize: "14px", color: "#888", margin: 0 }}>
             { new Date(doc.modified).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })}
           </p>
+          )}
           
         </div>
         
@@ -41,10 +42,11 @@ export default function Document({ doc, onClick, onComplete, onSend }) {
         <p style={{ margin: "10px 0", fontSize: "14px", fontStyle: "italic" }}>{doc.description}</p>
 
 
-        <p style={{ fontSize: "14px", fontWeight: 100, position: "absolute", bottom: -5  }}>
+        {!doc.noDocs && (<p style={{ fontSize: "14px", fontWeight: 100, position: "absolute", bottom: -5  }}>
             {doc.client ? doc.client.name : "General"}
-          </p>
+          </p>)}
       </div>
+      {!doc.noDocs && (
       <div style = {{display: "flex", justifyContent: "flex-end", flex: 1, position: "absolute",
             bottom: "10px",
             right: "10px", gap: 5}}>
@@ -76,6 +78,7 @@ export default function Document({ doc, onClick, onComplete, onSend }) {
           Send
         </button>)}
       </div>
+      )}
     </div>
   );
 }

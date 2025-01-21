@@ -16,7 +16,7 @@ const SendDocument = ({
       day: "2-digit",
     });
   };
-
+  
   const replacements = {
     DOCTYPE: doc.type,
     DOCNAME: doc.name,
@@ -36,7 +36,7 @@ const SendDocument = ({
   }
   
 
-  const [body, setBody] = useState(replacePlaceholders(`${settings?.defaultEmailBody ?? ""}${settings?.includeDeadlines && doc.fields.deadline ? `\n\nPlease kindly reply by ${dateToString(doc.deadline)}`:""}\n\n${replacePlaceholders(settings?.defaultEmailFooter ?? "")}`));
+  const [body, setBody] = useState(replacePlaceholders(`${settings?.defaultEmailBody ?? ""}${settings?.includeDeadlines && doc.fields?.Deadline ? `\n\nPlease kindly reply by ${dateToString(doc.Deadline)}`:""}\n\n${replacePlaceholders(settings?.defaultEmailFooter ?? "")}`));
   const [subject, setSubject] = useState(replacePlaceholders(settings?.defaultEmailSubject ?? ""));
   const [dueDate, setDueDate] = useState(""); // Date input
   const [curClient, setCurClient] = useState(currentClient);

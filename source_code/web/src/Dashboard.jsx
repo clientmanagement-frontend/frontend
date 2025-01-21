@@ -80,7 +80,9 @@ export default function Dashboard(props) {
                 setShowAddTask={props.setShowAddTask}
                 onDone={(task, dismiss) => {
                   if (task.type === "send") {
-                    props.sendDoc(task, true);
+                    // find the document to send
+                    const doc = props.documents.find((d) => d._id === task.doclink)
+                    props.sendDoc(doc);
                   } else {
                     props.removeTask(task, dismiss);
                   }
@@ -167,7 +169,8 @@ export default function Dashboard(props) {
                     onDoclink={props.onDoclink}
                     onDone={(task, dismiss) => {
                       if (task.type === "send") {
-                        props.sendDoc(task, true);
+                        const doc = props.documents.find((d) => d._id === task.doclink)
+                        props.sendDoc(doc);
                       } else {
                         props.removeTask(task, dismiss);
                       }
@@ -194,6 +197,7 @@ export default function Dashboard(props) {
                     currentTemplate={props.currentTemplate}
                     setCurrentTemplate={props.setCurrentTemplate}
                     templates={props.templates}
+                    
                   />
                 </div>
               </div>

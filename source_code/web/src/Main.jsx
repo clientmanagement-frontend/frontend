@@ -223,14 +223,29 @@ const addNote = (note) => {
   // Save document to server
   const saveDoc = async (doc, del, complete) => {
     doc.completed = complete;
+    let id
 
-    if (complete)
+    // Task associated with this document
+    const task = structuredClone(
+      tasks[doc.client ? doc.client._id : "none"]?.find((t) => t.doclink && t.doclink === doc._id)
+    );
+
+    // Delete the existing task (harshly = without confetti). We make a new one
+    if (task) handleTask(task, true, !complete);
+
+
+    if (complete && !del)
     {
       // We just completed the document.
       // Show some magic on the frontend. Task gets created after backend response of save-doc (so we have the id )
-      toast.success("Document completed!");
+      id = toast.success("Document completing...", {autoClose: false});
       
       
+    }
+    else if (!del)
+    {
+      id = toast.loading("Saving document...", {autoClose: false});
+
     }
     if (!doc._id && complete)
     {
@@ -250,26 +265,52 @@ const addNote = (note) => {
 
 
     if (del) {
+      id = toast.loading("Deleting document...")
       setDocuments((prev) => prev.filter((d) => d._id !== doc._id));
+      
+      ;
+
+      
       axios.post(`${SERVER_URL}/delete-document`, formData)
       .then((response) => {
+        toast.update(id, {render: "Document deleted!", type: "success", isLoading: false});
+      setTimeout(() => {
+        toast.dismiss(id); // Dismiss the toast after 2 seconds
+      }, 2000); // 2000 ms (2 seconds)
 
-        // we need to delete the task for this document, if there is a task
-        const task = tasks[doc.client ? doc.client._id : "none"].find((t) => t.doclink && t.doclink === doc._id);
-        if (task) handleTask(task, true);
+        
         
         // we no longer wait for the response
         // setCurrentDocument(null);
       })
       .catch((error) => {
         // Put it back in state
+
+        // we need to UNdelete the task for this document, if there was a task
+        if (task) handleTask(task, false);
+        
         setDocuments((prev) => [...prev, doc]);
         console.log(error);
-        toast.error("An error occurred. Please try again.");
+        toast.update(id, {render: "Error deleting document", type: "error", isLoading: false});
+      setTimeout(() => {
+        toast.dismiss(id); // Dismiss the toast after 2 seconds
+      }, 2000); // 2000 ms (2 seconds)
       });
 
       return;
     }
+    // find the completion task, and mark as complete if we just completed
+    // Find the task to modify (the complete task)
+    // const task = structuredClone(
+    //   tasks[doc.client ? doc.client._id : "none"]?.find((t) => t.doclink === doc._id && t.type === "complete")
+    // )
+    // Task existed, and we finished the document, so delete the task
+    // if (task && complete) handleTask(task, true);
+
+    
+
+
+
     // If the document is being edited update the state immediately for UI responsiveness
     if (doc._id) {
       setDocuments((prev) => prev.map((d) => d._id === doc._id ? doc : d));
@@ -279,6 +320,11 @@ const addNote = (note) => {
     axios.post(`${SERVER_URL}/save-document`, formData)
     .then((response) => {
 
+      toast.update(id, {render: complete ? "Document completed!" : "Document saved!", type: "success", isLoading: false});
+      setTimeout(() => {
+        toast.dismiss(id); // Dismiss the toast after 2 seconds
+      }, 2000); // 2000 ms (2 seconds)
+
       // Get the updated document: the server may have added an ID, completed status, etc.
       doc = response.data.doc;
 
@@ -287,6 +333,8 @@ const addNote = (note) => {
       if (response.status === 201) {
         // The document is new, so add it to the state
         setDocuments((prev) => [...prev, doc]);
+
+       
 
       }
 
@@ -314,13 +362,12 @@ const addNote = (note) => {
       }
 
 
-        // Find the task to modify (the complete task)
-        const task = tasks[doc.client ? doc.client._id : "none"]?.find((t) => t.doclink === doc._id && t.type === "complete");
-
-
-        // If it doesn't exist, create a new task, if we saved a draft
         
-        if (!task && !complete && (doc.client ? settings.autoTaskGeneration.finishClientDocuments : settings.autoTaskGeneration.finishGeneralDocuments))
+
+
+        // create a new task, if we saved a draft
+        
+        if (!complete && (doc.client ? settings.autoTaskGeneration.finishClientDocuments : settings.autoTaskGeneration.finishGeneralDocuments))
         {
           handleTask({
             doclink: doc._id,
@@ -332,22 +379,21 @@ const addNote = (note) => {
           }, false);
         }
         
-
-        // Task existed, and we finished the document, so delete the task
-        else if (complete) handleTask(task, true);
-
         // Task existed, and we didn't finish the document, so update the task with the new deadline
-        else if (doc.deadline) handleTask(task, false);
+        else if (task && !complete && doc.deadline) handleTask(task, false);
 
-      // Change to a toast notification
-      if (!complete)
-      {
-        toast.info(response.data.message);
-      }
-    })
+      })
     .catch((error) => {
       // Remove from state if it failed
       console.log(error);
+
+      // add the task back
+      if (complete) handleTask(task, false);
+
+      toast.update(id, {render: "Error saving document", type: "error", isLoading: false});
+      setTimeout(() => {
+        toast.dismiss(id); // Dismiss the toast after 2 seconds
+      }, 2000); // 2000 ms (2 seconds)
     });
 
   }
@@ -361,7 +407,7 @@ const addNote = (note) => {
     }
     setCurrentTemplate(template)
 
-    setCurrentDocument({completed: false, templateId: template._id, fields: template.fields, type: template.name, name: `New ${template.name} Document`});
+    setCurrentDocument({completed: false, templateId: template._id, fields: template.fields, type: template.name, name: `New ${template.name} Document`, client: currentClient});
 
 
      axios.get(`${SERVER_URL}/download-file`, {
@@ -658,18 +704,7 @@ const addNote = (note) => {
   }
 
   // Send a document to the client
-  // (TODO)
-  const prepSendDoc = async (doc, isTask) => {
-
-    // Pressed send through the task
-    // Need to present the send modal
-    if (isTask) {
-      // Make a deep copy of doc using spread operator
-      // Reference the task, so we know to satisfy it when sending the message
-      setCurrentTask({ ...doc });
-
-      doc = documents.find((d) => d._id === doc.doclink);
-    }
+  const prepSendDoc = async (doc) => {
     setCurrentDocument(doc);
     setShowSend(true);
   }
@@ -677,18 +712,24 @@ const addNote = (note) => {
   // Actually send the document
   // Called from the SendDocument modal
   const sendDocument = async (doc, msg) => {
+
+    // Is there a task associated with sending this document?
     
+    const task = structuredClone(
+      tasks[doc.client?._id || "none"].find((t) => t.doclink === doc._id )
+    );
 
     const formData = {
       userId: user.id,
       document: doc,
       message: msg,
       allClients: !msg.client ? clients : null,
+      email: user.email,
+      company: user.company,
     }
 
     // We can close the modal
     setShowSend(false);
-    setCurrentDocument(null);
 
     // Text message to send (Text or Both)
     if (msg.method !== "Email") {
@@ -711,12 +752,13 @@ const addNote = (note) => {
       }
     }
 
-    const id = toast.loading("Sending your email!");
+    const id = toast.loading("Sending your email!", {autoClose: false});
+    // We need to update the task to be satisfied, if it exists
+    if (task) handleTask(task, true);
     
     axios.post(`${SERVER_URL}/send-document`, formData)
     .then((response) => {
-      // We need to update the task to be satisfied, if it exists
-      if (currentTask?.doclink === currentDocument?._id) handleTask(currentTask, true);
+      
 
       setCurrentTask(null);
       toast.update(id, {render: response.data.message, type: "success", isLoading: false});
@@ -724,6 +766,7 @@ const addNote = (note) => {
         toast.dismiss(id); // Dismiss the toast after 2 seconds
       }, 2000); // 2000 ms (2 seconds)
       
+      setCurrentDocument(null);
 
       // Success
     })
@@ -733,14 +776,10 @@ const addNote = (note) => {
       setTimeout(() => {
         toast.dismiss(id); // Dismiss the toast after 2 seconds
       }, 2000); // 2000 ms (2 seconds)
+      setCurrentDocument(null);
 
-
-      // Add the task back
-      // if (currentTask?.doclink === currentDocument?._id) handleTask(currentTask);
-      // setCurrentTask(null);
-
-
-
+      // We need to update the task to be satisfied, if it exists
+      if (task) handleTask(task, false);
     });
   }
 
@@ -801,6 +840,7 @@ const updateSetting = (setting, value) => {
   if (!user) {
     return <Login login={login} api={SERVER_URL} />;
   }
+
 
   return (
     <BrowserRouter>
@@ -885,7 +925,7 @@ const updateSetting = (setting, value) => {
       {showSend && (
         <SendDocument
         //  Provide the current client for who to send to
-          currentClient={clients.find((c) => c._id === currentDocument.client?._id)}
+          currentClient={clients.find((c) => c._id === currentDocument?.client?._id)}
           setEditingClient={(edit) =>{
             setEditingClient(edit);
             setShowAddClient(edit);
@@ -898,7 +938,8 @@ const updateSetting = (setting, value) => {
           close={() => {
             setShowSend(false);
             setCurrentTask(null);
-            setCurrentDocument(null);
+            // Leave the document open incase of making changes
+            //setCurrentDocument(null);
           }}
           settings = {settings}
           user = {user}

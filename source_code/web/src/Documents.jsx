@@ -50,6 +50,31 @@ const Documents = (props) => {
           )} */}
         </div>
 
+        {props.documents.length < 1 && (
+                <div
+                style={{
+                    display: "flex",
+                    overflowX: "auto",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                    WebkitScrollbar: "none",
+                    scrollSnapType: "x mandatory",
+                }}
+            >
+                <div
+                style={{
+                    flex: `0 0 calc(100% / ${Math.floor(
+                        window.innerWidth / 400
+                    )})`,
+                    scrollSnapAlign: "start",
+                    maxWidth: 400
+                }}
+            >
+                <Document doc={{ name: `No ${props.currentTemplate ? props.currentTemplate.name : document}s yet!🤔`, description: props.currentTemplate? "\nClick to create one.": "Select or create a template to make your first document.", noDocs: true}} onClick={props.newDoc}/>
+            </div>
+            </div>
+            )}
+
       <div
         style={{
             display: "flex",

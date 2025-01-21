@@ -5093,6 +5093,12 @@ class AnnotationStorage {
     }
     return Object.assign(defaultValue, value);
   }
+
+  getModified()
+  {
+    return this.#modified;
+  }
+
   getRawValue(key) {
     return this.#storage.get(key);
   }

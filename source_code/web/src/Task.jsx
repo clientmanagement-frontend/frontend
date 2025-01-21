@@ -32,6 +32,7 @@ export default function Task({ task, onDone, onEdit, onDoclink, isDashboard }) {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
+        cursor: "pointer"
       }}
     >
       <div>
@@ -43,9 +44,10 @@ export default function Task({ task, onDone, onEdit, onDoclink, isDashboard }) {
           }}
         >
           <h3 style={{ margin: 0, fontSize: "18px" }}>{task.name}</h3>
-          <p style={{ fontSize: "14px", color: "#888" }}>
+          {(!task.noTasks && <p style={{ fontSize: "14px", color: "#888" }}>
             {calculateDueDate(task.due)}
           </p>
+          )}
         </div>
         {task.client && isDashboard && (
           <p style={{ fontSize: "14px", fontWeight: 100, position: "absolute", bottom: -5  }}>
@@ -55,7 +57,7 @@ export default function Task({ task, onDone, onEdit, onDoclink, isDashboard }) {
         <p style={{ margin: "5px 0", fontSize: "14px" }}>{task.description}</p>
       </div>
 
-      <div style = {{display: "flex", justifyContent: "flex-end", gap: 5, position: "absolute",
+      {!task.noTasks && (<div style = {{display: "flex", justifyContent: "flex-end", gap: 5, position: "absolute",
           bottom: "10px",
           right: "10px",}}>
 
@@ -101,12 +103,13 @@ export default function Task({ task, onDone, onEdit, onDoclink, isDashboard }) {
                 : "Finish") 
             
             // No doclink, standard task
-            : "Done"}
+            : task.noTasks ? "Create" : "Done"}
 
         </button>
 
 
       </div>
+      )}
     </div>
   );
 }

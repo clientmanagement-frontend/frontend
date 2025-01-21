@@ -31,6 +31,30 @@ const Tasks = (props) => {
                     }}
                     />
             </div>
+            {tasks.length < 1 && (
+                <div
+                style={{
+                    display: "flex",
+                    overflowX: "auto",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                    WebkitScrollbar: "none",
+                    scrollSnapType: "x mandatory",
+                }}
+            >
+                <div
+                style={{
+                    flex: `0 0 calc(100% / ${Math.floor(
+                        window.innerWidth / 400
+                    )})`,
+                    scrollSnapAlign: "start",
+                    maxWidth: 400
+                }}
+            >
+                <Task task={{name: "All caught up!\t🎉", description: "\nClick to create a task.", noTasks: true}} onEdit={() => props.setShowAddTask(true)} isDashboard={props.isDashboard}/>
+            </div>
+            </div>
+            )}
             {tasks.length >= 0    && (
             <div
                 style={{

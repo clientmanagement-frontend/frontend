@@ -98,7 +98,7 @@ async function maintainUsers() {
 
   // Email admin confirmation
   const mailOptions = {
-    from: process.env.MAILER_USER,
+    from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
     to: process.env.ADMIN_EMAIL,
     subject: `Successful CRM Maintenance`,
     text: `Hi Peter, just a confirmation that maintenance has run for all CRM users successfully.`,
@@ -153,7 +153,7 @@ async function maintainUsers() {
           const overdueTaskHTML = generateTaskHTML(overdueTasks);
           const emailHTML = generateTaskHTML(weeklyTasks);
           const mailOptions = {
-            from: process.env.MAILER_USER,
+            from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
             to: user.email,
             subject: "Your Weekly Task Digest",
             html: `<h1 style="color: #007bff;">Upcoming Tasks</h1>${emailHTML}<h2 style="color: #ff4444;">Overdue Tasks</h2>${overdueTaskHTML}`,
@@ -173,7 +173,7 @@ async function maintainUsers() {
           const overdueTaskHTML = generateTaskHTML(overdueTasks);
           const emailHTML = generateTaskHTML(dailyTasks);
           const mailOptions = {
-            from: process.env.MAILER_USER,
+            from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
             to: user.email,
             subject: "Your Daily Task Digest",
             html: `<h1 style="color: #007bff;">Today's and Tomorrow's Tasks</h1>${emailHTML}${overdueTasks.length > 0 ? `<h2 style="color: #ff4444;">Overdue Tasks</h2>${overdueTaskHTML}`: ""}`,
@@ -203,7 +203,7 @@ async function maintainUsers() {
         const overdueTaskHTML = generateTaskHTML(overdueTasks);
         const emailHTML = generateTaskHTML(upcomingTasks);
         const mailOptions = {
-          from: process.env.MAILER_USER,
+          from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
           to: user.email,
           subject: "Upcoming Tasks Reminder",
           html: `<h1 style="color: #007bff;">Upcoming Tasks</h1>${emailHTML}<h2 style="color: #ff4444;">Overdue Tasks</h2>${overdueTaskHTML}`,
@@ -318,7 +318,7 @@ async function maintainUsers() {
           {
             // Send me a notice email
             const mailOptions = {
-              from: process.env.MAILER_USER,
+              from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
               to: process.env.ADMIN_EMAIL,
               subject: `🎉 Template NEW SUBSCRIBER! `,
               text: `Woohoo! 🥳 ${user.email} just subscribed!`,
@@ -508,7 +508,7 @@ async function maintainUsers() {
           updateOperation).then(() => {
 
             const mailOptions = {
-              from: process.env.MAILER_USER,
+              from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
               to: req.body.email,
               subject: `${code} is your ${process.env.APP_NAME} confirmaition code`,
               text: `A new password was requested for your account. If this was you, enter code ${code} in the app. If not, somebody tried to log in using your email.`,
@@ -559,7 +559,7 @@ async function maintainUsers() {
           { new: true }).then(() => {
 
             const mailOptions = {
-              from: process.env.MAILER_USER,
+              from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
               to: user.email,
               subject: `${code} is your ${process.env.APP_NAME} confirmaition code`,
               text: `Your ${process.env.APP_NAME} account was accessed from a new location. If this was you, enter code ${code} in the app. If not, you can change your password in the app. Feel free to reply to this email for any assistance!`,
@@ -1180,15 +1180,17 @@ router.post("/save-document", async (request, response) => {
 });
 
 router.post("/send-document", async (request, response) => {
-  const { userId, document, message, allClients } = request.body;
+  const { userId, document, message, allClients, email, company } = request.body;
 
+  const from = company ? `"${company}" <${email}>` : email
   try {
     // Download the document
     const pdfBuffer = await downloadFile(`${userId}/documents`, document._id);
 
     // Make mail options, if message.client is falsey, send to each .email field in allClients array:
     const mailOptions = {
-      from: process.env.MAILER_USER,
+      from: from,
+      replyTo: email,
       to: message.client ? message.client.email : allClients.map(client => client.email).join(", "),
       subject: message.subject,
       text: message.body,
@@ -1457,7 +1459,8 @@ router.post("/delete-template", async (request, response) => {
   // Send help email
   router.post("/contact", (request, response) => {
     const mailOptions = {
-      from: process.env.MAILER_USER,
+      from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
+      replyTo: request.body.email,
       to: process.env.MAILER_USER,
       bcc: process.env.ADMIN_EMAIL,
       subject: `${process.env.APP_NAME} Support`,
@@ -1504,7 +1507,7 @@ router.post("/delete-template", async (request, response) => {
               {
                 // Send the email
                 const mailOptions = {
-                  from: process.env.MAILER_USER,
+                  from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
                   to: process.env.MAILER_USER,
                   bcc: process.env.ADMIN_EMAIL,
                   subject: `${process.env.APP_NAME} new user! 😁`,
@@ -1743,7 +1746,7 @@ router.post("/log-or-reg", (request, response) => {
                 {
                   // Send the email
                   const mailOptions = {
-                    from: process.env.MAILER_USER,
+                    from: `"${process.env.APP_NAME}" <${process.env.MAILER_USER}>`,
                     to: process.env.MAILER_USER,
                     bcc: process.env.ADMIN_EMAIL,
                     subject: `${process.env.APP_NAME} new user! 😁`,

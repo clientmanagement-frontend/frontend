@@ -2,6 +2,7 @@ import BackButton from './BackButton';
 import Document from './Document';
 import DocumentEditor from './DocumentEditor';
 import ClientList from './ClientList';
+// import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const DocumentBrowser = (props) => {
@@ -9,14 +10,25 @@ const DocumentBrowser = (props) => {
   const sortedDocuments = [...props.documents].sort((a, b) => new Date(b.modified) - new Date(a.modified));
   const navigate = useNavigate();
 
+  // const { param } = useParams();
+  // const { setCurrentDocument } = props;
+
+
+  // useEffect(() => {
+  //     console.log(param)
+  //     setCurrentDocument(props.documents.find((d) => d.id === param)) // will set to null, also
+    
+  // }, [param, setCurrentDocument]);
+
   if (props.currentDocument)
     return (
       <DocumentEditor
         doc={props.currentDocument}
-        onBack={() => props.setCurrentDocument(null)}
+        onBack={() => {props.setCurrentDocument(null)}}
         user={props.user}
         saveDoc={props.saveDoc}
         clients={props.clients}
+        useViewer={!props.isMobile}
       />
     );
 
@@ -33,6 +45,10 @@ const DocumentBrowser = (props) => {
           addClient={() => props.setShowAddClient(true)}
           search={props.search}
           setSearch={props.setSearch}
+
+          isMobile={props.isMobile}
+          mobileMenuOpen={props.mobileMenuOpen}
+          setMobileMenuOpen={props.setMobileMenuOpen}
         />
       </div>
 

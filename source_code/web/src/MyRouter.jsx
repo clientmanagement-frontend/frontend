@@ -61,7 +61,10 @@ const MyRouter = (props) => {
               setSearch = {props.setSearch}
 
               // Document sending
-              sendDoc = {props.sendDoc}
+              sendDoc={(doc, msg) => {
+                  props.sendDoc(doc, msg)
+                  navigate("/documents")
+                }}
 
               // Doclink
               onDoclink = {(task) => {
@@ -85,6 +88,7 @@ const MyRouter = (props) => {
                 settings = {props.settings}
                 documents = {props.documents}
                 templates = {props.templates}
+                isMobile = {props.isMobile}
 
                 clients = {props.clients}
                 user = {props.user}
@@ -122,7 +126,10 @@ const MyRouter = (props) => {
                   props.setShowAddTemplate(true); // Open the modal
                 }}
 
-                onSend={props.sendDoc}
+                onSend={(doc, msg) => {
+                  props.sendDoc(doc, msg)
+                  navigate("/documents")
+                }}
                 saveDoc = {props.saveDoc}
 
                 search = {props.search}
