@@ -616,7 +616,7 @@ function inputToDate(input) {
 
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden"}}>
       <BackButton onClick={onBack} />
 
       {/* Left: PDF Viewer */}
@@ -637,15 +637,13 @@ function inputToDate(input) {
       <div
         style={{
           flex: 1,
-          padding: "10px",
+          padding: 5,
           justifyContent: "space-between",
           display: "flex",
           flexDirection: "column",
-          marginLeft: 20,
-          marginRight: 20
         }}
       >
-        <div >
+        <div style = {{overflowY: "auto", padding: 5}}>
           <div className="form-floating mb-3">
             <input
               type="text"
@@ -710,10 +708,16 @@ function inputToDate(input) {
 
           <hr></hr>
 
-          <div style = {{overflowY: "auto"}}>
+          <div>
           <form >
             {/* Whether on mobile or desktop, render date fields */}
-          {fields && Object.entries(fields).filter(([key,value]) => key.toLowerCase().includes("date") || key.toLowerCase().includes("deadline")).map(([key, value]) => (
+            {!loaded && (
+              <div style = {{display: "flex", alignContent: "center", alignSelf: "center", alignItems: "center"}}>
+                <h3>Loading fields...</h3>
+
+              </div>
+            )}
+          {loaded && fields && Object.entries(fields).filter(([key,value]) => key.toLowerCase().includes("date") || key.toLowerCase().includes("deadline")).map(([key, value]) => (
             
             <div className="form-floating mb-3" key={key}>
                 <input

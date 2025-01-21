@@ -90,6 +90,9 @@ const MyRouter = (props) => {
                 templates = {props.templates}
                 isMobile = {props.isMobile}
 
+                mobileMenuOpen = {props.mobileMenuOpen}
+                setMobileMenuOpen = {props.setMobileMenuOpen}
+
                 clients = {props.clients}
                 user = {props.user}
 
@@ -118,7 +121,6 @@ const MyRouter = (props) => {
                 onComplete = {(doc) => {
                   doc.completed = !doc.completed;
                   props.saveDoc(doc);
-                  console.log("ballsack!")
                 }}
 
                 onEdit={() => {
@@ -144,7 +146,7 @@ const MyRouter = (props) => {
               
               />} />
           <Route path="account" element={<Account host = {props.host} user = {props.user} settings = {props.settings} saveSettings = {props.saveSettings} updateSetting = {props.updateSetting} />} />
-          <Route path="contact" element={<ContactForm host = {props.host}/>} />
+          <Route path="contact" element={<ContactForm host = {props.host} isMobile = {props.isMobile}/>} />
       </Routes>
     
       
