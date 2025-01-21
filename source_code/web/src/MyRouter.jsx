@@ -118,6 +118,7 @@ const MyRouter = (props) => {
                 onComplete = {(doc) => {
                   doc.completed = !doc.completed;
                   props.saveDoc(doc);
+                  console.log("ballsack!")
                 }}
 
                 onEdit={() => {

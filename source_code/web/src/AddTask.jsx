@@ -33,15 +33,9 @@ const AddTask = ({ clients, close, handle, task, currentClient, due }) => {
       return;
     }
 
-    const newTask = {
-      _id: task ? task._id : null,
-      name: taskName,
-      description: description,
-      due: new Date(dueDate).toISOString(),
-      client: selectedClient, // Entire client object
-    };
+    const newTask = {...task, name: taskName, description: description, due: new Date(dueDate).toISOString(), client: selectedClient}
 
-    handle(newTask);
+    handle(newTask, false, false, false);
   };
 
   return (

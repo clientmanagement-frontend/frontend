@@ -221,17 +221,65 @@ const addNote = (note) => {
 
 
   // Save document to server
-  const saveDoc = async (doc, del, complete) => {
+  const saveDoc = async (doc, del, complete, bypass) => {
+
     doc.completed = complete;
     let id
+    let task
 
-    // Task associated with this document
-    const task = structuredClone(
-      tasks[doc.client ? doc.client._id : "none"]?.find((t) => t.doclink && t.doclink === doc._id)
-    );
+    // Get the old document
+    if (doc._id && !bypass)
+    {
+      // Old doc
+      const oldDoc = documents.find((old) => old._id === doc._id)
+      // If the client changed, and a task exists for this document, update the client associated with that task
+      const oldClient = oldDoc.client ? oldDoc.client : null
+      const newClient = doc.client? doc.client : null
+
+      const oldClientId = oldClient ? oldClient._id : "none"
+      const newClientId = newClient ? newClient._id : "none"
+
+      // We changed the client
+      if (oldClientId !== newClientId && tasks[oldClient._id])
+      {
+        // We need to remove the task from the old client's array
+        const oldTask = tasks[oldClient._id].find((t) => t.doclink && t.doclink === doc._id)
+        
+        if (oldTask) 
+        {
+          task = {...oldTask, client: newClient}
+          // Delete the existing task from state
+          setTasks((prevTasks) => {
+            const updatedTasks = { ...prevTasks };
+          
+            // Filter tasks for the client and update or remove the client key
+            const filteredTasks = (updatedTasks[oldClientId]?.filter((t) => t._id !== task._id)) ?? [];
+            filteredTasks.length > 0 ? (updatedTasks[oldClientId] = filteredTasks) : delete updatedTasks[oldClientId];
+          
+            return updatedTasks;
+          });
+          
+
+          handleTask(task, false, false, true)
+          
+
+        }
+      }
+    }
+    else // client did not change
+    {
+      // Task associated with this document
+      task = structuredClone(
+        tasks[doc.client ? doc.client._id : "none"]?.find((t) => t.doclink && t.doclink === doc._id)
+      );
+
+    }
+    
+
+    
 
     // Delete the existing task (harshly = without confetti). We make a new one
-    if (task) handleTask(task, true, !complete);
+    if (task) { handleTask(task, true, !complete); }
 
 
     if (complete && !del)
@@ -287,7 +335,7 @@ const addNote = (note) => {
         // Put it back in state
 
         // we need to UNdelete the task for this document, if there was a task
-        if (task) handleTask(task, false);
+        if (task) { handleTask(task, false) ;}
         
         setDocuments((prev) => [...prev, doc]);
         console.log(error);
@@ -299,16 +347,6 @@ const addNote = (note) => {
 
       return;
     }
-    // find the completion task, and mark as complete if we just completed
-    // Find the task to modify (the complete task)
-    // const task = structuredClone(
-    //   tasks[doc.client ? doc.client._id : "none"]?.find((t) => t.doclink === doc._id && t.type === "complete")
-    // )
-    // Task existed, and we finished the document, so delete the task
-    // if (task && complete) handleTask(task, true);
-
-    
-
 
 
     // If the document is being edited update the state immediately for UI responsiveness
@@ -350,7 +388,7 @@ const addNote = (note) => {
       // If the document is complete, we need to create a task to send the document
 
       // add && doc.client if we only want to send tasks for clients
-      if ((doc.client ? settings.autoTaskGeneration.sendClientDocuments : settings.autoTaskGeneration.sendGeneralDocuments) && complete) {
+      if (!bypass && (doc.client ? settings.autoTaskGeneration.sendClientDocuments : settings.autoTaskGeneration.sendGeneralDocuments) && complete) {
         handleTask({
           name: `Send ${doc.name}`,
           description: `Send out the ${doc.type}`,
@@ -359,6 +397,7 @@ const addNote = (note) => {
           type: "send",
           doclink: doc._id
         }, false);
+        
       }
 
 
@@ -367,7 +406,7 @@ const addNote = (note) => {
 
         // create a new task, if we saved a draft
         
-        if (!complete && (doc.client ? settings.autoTaskGeneration.finishClientDocuments : settings.autoTaskGeneration.finishGeneralDocuments))
+        if (!bypass && !complete && (doc.client ? settings.autoTaskGeneration.finishClientDocuments : settings.autoTaskGeneration.finishGeneralDocuments))
         {
           handleTask({
             doclink: doc._id,
@@ -377,10 +416,11 @@ const addNote = (note) => {
             client: doc.client,
             type: "complete"
           }, false);
+          
         }
         
         // Task existed, and we didn't finish the document, so update the task with the new deadline
-        else if (task && !complete && doc.deadline) handleTask(task, false);
+        else if (task && !complete && doc.deadline) { handleTask(task, false); }
 
       })
     .catch((error) => {
@@ -388,7 +428,7 @@ const addNote = (note) => {
       console.log(error);
 
       // add the task back
-      if (complete) handleTask(task, false);
+      if (complete) { handleTask(task, false);  }
 
       toast.update(id, {render: "Error saving document", type: "error", isLoading: false});
       setTimeout(() => {
@@ -449,7 +489,7 @@ const addNote = (note) => {
 
 
   // Add, delete or edit the task
-  const handleTask = (task, del, harsh) => {
+  const handleTask = (task, del, harsh, bypass) => {
     // The client to associate the task with
     const client = task.client ? task.client._id : "none"
 
@@ -495,7 +535,6 @@ const addNote = (note) => {
       curClient: currentTask?.client ?? task.client,
     })
     .then((response) => {
-      
 
       // Success - get the new task id, if the task was added
       const id = response.data.id;
@@ -518,6 +557,19 @@ const addNote = (note) => {
           // Extract current and new client IDs from the task
           const oldClientId = currentTask?.client ? currentTask.client._id : "none";
           const newClientId = task.client ? task.client._id : "none";
+
+          // If the client changed, and there is an associated document, update the document association
+          if (!bypass && oldClientId !== newClientId)
+          {
+            if (task.doclink)
+            {
+              // find the document associated with the task
+              const doc = documents.find((d) => d._id === task.doclink)
+
+              // updates DB and state
+              saveDoc({ ...doc, client: {name: task.client.name, _id: newClientId} }, false, doc.complete, true)
+            }
+          }
         
           // Remove the task from the old client's tasks
           const updatedOldClientTasks = prevTasks[oldClientId]?.filter((t) => t._id !== task._id) ?? [];
@@ -754,11 +806,11 @@ const addNote = (note) => {
 
     const id = toast.loading("Sending your email!", {autoClose: false});
     // We need to update the task to be satisfied, if it exists
-    if (task) handleTask(task, true);
     
     axios.post(`${SERVER_URL}/send-document`, formData)
     .then((response) => {
       
+    if (task) { handleTask(task, true); };
 
       setCurrentTask(null);
       toast.update(id, {render: response.data.message, type: "success", isLoading: false});
@@ -778,8 +830,8 @@ const addNote = (note) => {
       }, 2000); // 2000 ms (2 seconds)
       setCurrentDocument(null);
 
-      // We need to update the task to be satisfied, if it exists
-      if (task) handleTask(task, false);
+      // We need to re-add the task due to error
+      if (task) { handleTask(task, false); }
     });
   }
 
@@ -878,7 +930,7 @@ const updateSetting = (setting, value) => {
         setEditingClient={setEditingClient}
 
         // Remove a task
-        removeTask={(task, dismiss) => handleTask(task, true, dismiss)}
+        removeTask={(task, dismiss) => { handleTask(task, true, dismiss); }}
         setCurrentTask={setCurrentTask}
 
         // Templates
@@ -920,7 +972,8 @@ const updateSetting = (setting, value) => {
       gravity={0.2}
       style={{
         animation: 'fadeOut 5s ease-in-out',
-      }} />}
+      }} />
+      }
 
       {showSend && (
         <SendDocument
@@ -953,8 +1006,9 @@ const updateSetting = (setting, value) => {
             setShowAddTask(false);
             setEditingClient(false);
           }}
-          handle={(task, del, harsh) => {
-            handleTask(task, del, harsh);
+          handle={(task, del, harsh, bypass) => {
+            handleTask(task, del, harsh, bypass);
+            
             setShowAddTask(false);
             setCurrentTask(null);
           }}

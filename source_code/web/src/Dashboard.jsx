@@ -193,7 +193,6 @@ export default function Dashboard(props) {
                       props.saveDoc(doc);
                     }}
                     onSend={props.sendDoc}
-                    onSave={props.saveDoc}
                     currentTemplate={props.currentTemplate}
                     setCurrentTemplate={props.setCurrentTemplate}
                     templates={props.templates}

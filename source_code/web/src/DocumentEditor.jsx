@@ -87,6 +87,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
   );
 
   useEffect(() => {
+    // Key value pairs to .. what even is this ???
     const fetchFieldData = async () => {
       if (!fields || useViewer) return;
   
@@ -141,7 +142,6 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
       setFieldGroupsBoxes(newFieldGroupsBoxes);
       setFieldGroupsRadios(newFieldGroupsRadios);
       setFieldData(newFieldData);
-      console.log(newFieldData)
     };
   
     fetchFieldData();
@@ -263,9 +263,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
         // Update fields and collect field values
         annotations.forEach(async (annotation) => {
           if (annotation.fieldName) 
-            updatedFields[annotation.fieldName] = annotation.fieldValue;
-
-  
+            updatedFields[annotation.fieldName] =   annotation.checkBox ? (annotation.fieldValue === "Off" ? false : true) : annotation.fieldValue //annotation.radioButton? annotation.fieldValue : annotation.fieldValue;
         });
       }
 
@@ -401,48 +399,59 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
     
   }, [doc,  setFieldValue, getDoc, pdfUrl, getFields, updateFields, loaded, handleFieldChange])
 
-  // We got the fields
-  useEffect(() => {
-    if (fields)
-    {
-      //console.log(fields)
-      // We can use these fields however we want ...
-      
-    }
-      
-
-  }, [fields])
 
   
   // If we expand the view to see the viewer, load the changes
-  useEffect(() => {
-    if (loaded && useViewer) 
-    {
+  // useEffect(() => {
+  //   if (loaded && useViewer) 
+  //   {
 
-      async function refreshPdf()
-      {
-        const pdfDocument = getDoc()
-      // If we're not using the viewer, we need to populate the pdf first.
-      if (!useViewer)
-        for (const fieldName of Object.keys(fields))
-        {
-          await setFieldValue(pdfDocument, fieldName, fields[fieldName])
-        }
+  //     // Going from no viewer, to viewer.
+  //     // Gather state fields, and set them on the doc
+  //     async function enterViewer()
+  //     {
+        
+  //       const pdfDocument = getDoc()
+  //       for (const fieldName of Object.keys(fields))
+  //       {
+  //         console.log(fields[fieldName])
+  //         var fObject = await getFieldObjById(pdfDocument, fieldName);
+  //         if(!fObject) continue// The requested field does not exist, skip (will not add to state)
+  //         pdfDocument.annotationStorage.setValue(fObject.id, {value: fields[fieldName]});
+
+  //       }
       
 
-      // Extract the updated data from the PDF viewer
-      const newpdf = await pdfDocument.saveDocument();
-      const pdfBlob = new Blob([newpdf], { type: "application/pdf" });
-      const blob = URL.createObjectURL(pdfBlob);
-      setPdfUrl(blob)
+  //     // Extract the updated data from the PDF viewer
+  //     const newpdf = await pdfDocument.saveDocument();
+  //     const pdfBlob = new Blob([newpdf], { type: "application/pdf" });
+  //     const blob = URL.createObjectURL(pdfBlob);
+  //     setPdfUrl(blob)
 
-      }
-      refreshPdf()
+  //     }
       
+  //     enterViewer()
+  //   }
 
-    }
+  // }, [loaded, useViewer, getDoc, getFieldObjById, fields])
 
-  }, [loaded, useViewer, getDoc, setFieldValue, fields])
+  // // If we collapse to leave the viewer, save in state
+  // useEffect(() => {
+  //   if (loaded && !useViewer) 
+  //   {
+
+  //     // Going from viewer to no viewer
+  //     // Gather pdf fields, and set them as state
+  //     async function exitViewer()
+  //     {
+  //       setFields(await getFields())
+  //     }
+
+  //     exitViewer()
+
+  //   }
+
+  // }, [loaded, useViewer, getFields])
 
   // Save the document
   const saveDocument = async (complete) => {
@@ -471,6 +480,8 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
         type: doc.type,
         modified: new Date().toISOString(),
         deadline: deadline,
+        complete: complete,
+        completed: complete
       };
   
       // Save the document
@@ -499,7 +510,7 @@ const DocumentEditor = ({ doc, onBack, saveDoc, clients, useViewer }) => {
   
   // Delete the document
   const deleteDoc = async () => {
-    doc._id ? saveDoc({ _id: doc._id }, true, false) : onBack();
+    doc._id ? saveDoc({ _id: doc._id }, true, false, true) : onBack();
   };
 
   // Convert input to a valid month datatype
@@ -718,66 +729,83 @@ function inputToDate(input) {
             </div>
             ))}
 
-            {/* If we're on mobile, render all other fields */}
-          {/* {fields && !useViewer && Object.entries(fields).filter(([key,value]) => !key.toLowerCase().includes("date")).map(([key, value]) => (
-            <div className="form-floating mb-3" key={key}>
-                <input
-                    type="text"
-                    className="form-control"
-                    id={key}
-                    value={value}
-                    onChange={(e) => handleFieldChange(key, e.target.value)}
-                    placeholder={key}
-                />
-                
-                <label htmlFor={key}>{key}</label>
+{/* Render text and dropdowns */}
+{fieldData &&
+  !useViewer &&
+  (() => {
+    let currentGroup = null; // Track the current group
+    let hasGroup = false; // Flag to check if we've rendered a group
+
+    return Object.entries(fieldData).map(([key, { fieldType, fieldObj, value }], index, entries) => {
+      if (key.toLowerCase().includes("date") || key.toLowerCase().includes("deadline")) return null;
+
+      const [group, title] = key.includes(":") ? key.split(":") : [null, key]; // Split into group and title
+      const isGroupStart = group && group !== currentGroup; // Check if we're starting a new group
+      const isLastInGroup =
+        group &&
+        (index === entries.length - 1 || entries[index + 1][0]?.split(":")[0] !== group); // Last item in the group
+
+      const groupLabel = isGroupStart ? (
+        <>
+          {currentGroup && hasGroup && <hr />} {/* Divider after the previous group */}
+          <h4>{group}</h4> {/* Render group label */}
+        </>
+      ) : null;
+
+      const groupDivider = isLastInGroup ? <hr /> : null; // Divider after the current group ends
+
+      currentGroup = group || currentGroup; // Update the current group
+      hasGroup = group ? true : hasGroup; // Mark that a group has been processed
+
+      const renderField = () => {
+        if (fieldType === "text") {
+          return (
+            <div className="form-floating mb-3">
+              <input
+                type="text"
+                className="form-control"
+                id={key}
+                value={value}
+                onChange={(e) => handleFieldChange(key, e.target.value)}
+                placeholder={key}
+              />
+              <label htmlFor={key}>{title || key}</label>
             </div>
-            ))} */}
-        {fieldData &&
-        !useViewer &&
-        Object.entries(fieldData).map(([key, { fieldType, fieldObj, value }]) => {
-          if (key.toLowerCase().includes("date") || key.toLowerCase().includes("deadline")) return null
+          );
+        } else if (fieldType === "combobox") {
+          const options = fieldObj?.items.map((i) => i.displayValue) || [];
+          return (
+            <div className="form-floating mb-3">
+              <select
+                className="form-select"
+                id={key}
+                value={value}
+                onChange={(e) => handleFieldChange(key, e.target.value)}
+              >
+                {options.map((option, idx) => (
+                  <option key={idx} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor={key}>{title || key}</label>
+            </div>
+          );
+        }
+        return null;
+      };
+
+      return (
+        <React.Fragment key={key}>
+          {groupLabel}
+          {renderField()}
+          {groupDivider}
+        </React.Fragment>
+      );
+    });
+  })()}
 
 
-          if (fieldType === "text") {
-            // Render text input field
-            return (
-              <div className="form-floating mb-3" key={key}>
-                <input
-                  type="text"
-                  className="form-control"
-                  id={key}
-                  value={value}
-                  onChange={(e) => handleFieldChange(key, e.target.value)}
-                  placeholder={key}
-                />
-                <label htmlFor={key}>{key}</label>
-              </div>
-            );
-          } else if (fieldType === "combobox") {
-            // Render dropdown field
-            const options = fieldObj?.items.map((i) => i.displayValue) || []; // Get dropdown options
-            return (
-              <div className="form-floating mb-3" key={key}>
-                <select
-                  className="form-select"
-                  id={key}
-                  value={value}
-                  onChange={(e) => handleFieldChange(key, e.target.value)}
-                >
-                  {options.map((option, idx) => (
-                    <option key={idx} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <label htmlFor={key}>{key}</label>
-              </div>
-            );
-          } else {
-            return null; // Unsupported field types
-          }
-        })}
   
         {/* Radios */}
         {fieldGroupsRadios &&

@@ -780,30 +780,49 @@ router.post("/add-client", async (request, response) => {
   }
 });
 
-// Delete a task
 router.post("/delete-task", async (request, response) => {
-  const userId = request.body.userId;
-  const taskId = request.body.taskId;
-  const taskClient = request.body.taskClient;
-
+  const { userId, taskId } = request.body;
 
   try {
+    // Fetch the user document
+    const user = await User.findById(userId);
+    if (!user) {
+      return response.status(404).send({ message: "User not found." });
+    }
+
+    // Access the tasks Map properly
+    const tasks = user.tasks instanceof Map ? user.tasks : new Map(Object.entries(user.tasks));
+    let taskClientToUpdate = null;
+
+    for (const [taskClient, taskArray] of tasks) {
+      if (taskArray.some((task) => task._id.toString() === taskId)) {
+        taskClientToUpdate = taskClient;
+        break;
+      }
+    }
+
+    if (!taskClientToUpdate) {
+      return response.status(404).send({ message: "Task not found." });
+    }
+
+    // Remove the task from the identified taskClient
     const result = await User.updateOne(
       { _id: userId },
-      { $pull: { [`tasks.${taskClient}`]: { _id: taskId } } }
+      { $pull: { [`tasks.${taskClientToUpdate}`]: { _id: taskId } } }
     );
-    
+
     if (result.modifiedCount > 0) {
       response.status(200).send({ message: "Task deleted successfully." });
-    }
-    else {
-      response.status(404).send({ message: "Task not found or no changes made." });
+    } else {
+      response.status(404).send({ message: "No changes made." });
     }
   } catch (error) {
     console.error("Error deleting user task:", error);
     response.status(500).send({ message: "Internal server error." });
   }
 });
+
+
 
 // Add or edit task
 router.post("/add-task", async (request, response) => {
@@ -836,6 +855,7 @@ router.post("/add-task", async (request, response) => {
         }
 
       } else {
+
         // If the client hasn't changed, just update the task
         const result = await User.updateOne(
           {
@@ -854,6 +874,7 @@ router.post("/add-task", async (request, response) => {
         }
       }
     } else {
+
       // Add a new task
       const newId = new mongoose.Types.ObjectId().toString();
 
@@ -1090,46 +1111,17 @@ router.post("/delete-document", async (request, response) => {
 
 // Create (or save) a document from a template
 router.post("/save-document", async (request, response) => {
+
+
   const userId = request.body.userId;
   let document = request.body.document;
-  const pdfBuffer = Buffer.from(new Uint8Array(document.data));
+  const pdfBuffer = document.data ? Buffer.from(new Uint8Array(document.data)): null;
 
   delete document.data; // Remove the data field from the document object
 
 
   
   try {
-    // // Load template PDF, to replace the fields with the user's data
-    // const template = await downloadFile(`${userId}/templates`, templateId);
-
-    // const data = await pdf(template);
-
-    // let modifiedText = data.text;
-    // for (const [key, value] of Object.entries(fields)) {
-    //     const regex = new RegExp(`\\$${key}\\$`, "g"); // Match $key$
-    //     modifiedText = modifiedText.replace(regex, value);
-    // }
-
-    // // Load the original PDF
-    // const pdfDoc = await PDFDocument.load(template);
-
-    // // Update each page of the PDF with modified content
-    // const pages = pdfDoc.getPages();
-    // const pageHeight = pages[0].getHeight();
-
-    // for (let i = 0; i < pages.length; i++) {
-    //     const page = pages[i];
-    //     page.drawText(modifiedText, {
-    //         x: 50,
-    //         y: pageHeight - 50,
-    //         size: 12,
-    //         font: await pdfDoc.embedFont(PDFDocument.PDFFont.Helvetica),
-    //     });
-    // }
-
-
-    // Save the modified PDF
-    //const pdfBuffer = await pdfDoc.save();
     
 
     // Add document to database user.documents if it doesn't exist (documentId is null) or update it if it does
@@ -1145,8 +1137,13 @@ router.post("/save-document", async (request, response) => {
       );
 
       if (result.matchedCount > 0) {
-        await deleteFile(`${userId}/documents`, document._id)
-        await uploadFile(`${userId}/documents`, pdfBuffer, `${document._id}.pdf`);
+
+        if (pdfBuffer)
+        {
+          await deleteFile(`${userId}/documents`, document._id)
+          await uploadFile(`${userId}/documents`, pdfBuffer, `${document._id}.pdf`);
+        }
+        
 
         return response.status(200).send({ message: "Document updated successfully.", doc: document });
       } else {
