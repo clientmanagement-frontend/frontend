@@ -99,6 +99,28 @@ const Main = () => {
     
   };
 
+  // make a function to delete the account
+  const deleteAccount = () => {
+    // make the user supply their password in a popup dialog
+    const password = prompt("Please enter your password to confirm:");
+    if (!password) return;
+
+    const confirmDelete = window.confirm("Are you sure you want to delete your account? This action cannot be undone.");
+    if (!confirmDelete) return;
+
+    axios
+      .post(`${SERVER_URL}/deleteAccount`, { id: user.id })
+      .then((response) => {
+        toast.success("Account deleted successfully.");
+        localStorage.removeItem("token");
+        setUser(null);
+      })
+      .catch((error) => {
+        console.error(error);
+        toast.error("An error occurred. Please try again.");
+      });
+  };
+
   // Filter documents by search and current template
   const filteredDocuments = useMemo(() => {
     if (!documents) return []

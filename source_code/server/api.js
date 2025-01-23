@@ -929,7 +929,39 @@ router.post('/save-settings', (req, res) => {
   )
 })
 
+async function deleteFolder(fullPath) {
+  const folders = fullPath.split('/'); // Split the full path into folder names
 
+  let megaFolder = mega.root; // The folder reference, starting at the root
+
+  for (const folder of folders) {
+    let found = false;
+    for (const dir of megaFolder.children) {
+      if (dir.name === folder && dir.directory) {
+        megaFolder = dir;
+        found = true;
+        break; // Break out of the loop once the folder is found
+      }
+    }
+    if (!found) {
+      throw new Error(`Folder ${folder} not found`);
+    }
+  }
+
+  // Recursively delete all contents within the folder
+  async function deleteContents(folder) {
+    for (const item of folder.children) {
+      if (item.directory) {
+        await deleteContents(item); // Recursively delete subfolders
+      } else {
+        await item.delete(); // Delete files
+      }
+    }
+    await folder.delete(); // Delete the folder itself
+  }
+
+  await deleteContents(megaFolder);
+}
 
 
 // Delete a file
@@ -1929,7 +1961,8 @@ User.findOne({ email: request.body.email })
               }
 
               User.findByIdAndDelete(id)
-              .then((res)=> {
+              .then(async (res)=> {
+                await deleteFolder(id)
                 response.status(200).send({
                   message: "Delete Successful"
               });
