@@ -944,12 +944,14 @@ async function deleteFolder(fullPath) {
       }
     }
     if (!found) {
-      throw new Error(`Folder ${folder} not found`);
+      // throw new Error(`Folder ${folder} not found`);
     }
   }
 
   // Recursively delete all contents within the folder
   async function deleteContents(folder) {
+    try {
+
     for (const item of folder.children) {
       if (item.directory) {
         await deleteContents(item); // Recursively delete subfolders
@@ -958,9 +960,17 @@ async function deleteFolder(fullPath) {
       }
     }
     await folder.delete(); // Delete the folder itself
-  }
+  
 
-  await deleteContents(megaFolder);
+    }
+    catch {
+  
+    }
+
+}
+await deleteContents(megaFolder);
+
+
 }
 
 
@@ -1937,7 +1947,7 @@ User.findOne({ email: request.body.email })
 
   // Delete account
   router.post('/deleteAccount', async(req, response) => {
-    let pwd = req.body.password
+    let pwd = req.body.pwd
     let id = req.body.id
 
     User.findById({_id: id })
@@ -1962,7 +1972,7 @@ User.findOne({ email: request.body.email })
 
               User.findByIdAndDelete(id)
               .then(async (res)=> {
-                await deleteFolder(id)
+                deleteFolder(id)
                 response.status(200).send({
                   message: "Delete Successful"
               });

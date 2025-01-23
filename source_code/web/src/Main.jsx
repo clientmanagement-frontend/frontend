@@ -13,8 +13,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import Confetti from 'react-confetti';
 
 const Main = () => {
-  // const SERVER_URL = `http://localhost:3001`;
-  const SERVER_URL = `https://backend-dn90.onrender.com`;
+  const SERVER_URL = `http://localhost:3001`;
+  // const SERVER_URL = `https://backend-dn90.onrender.com`;
 
   
 
@@ -109,8 +109,9 @@ const Main = () => {
     if (!confirmDelete) return;
 
     axios
-      .post(`${SERVER_URL}/deleteAccount`, { id: user.id })
+      .post(`${SERVER_URL}/deleteAccount`, { id: user.id, pwd: password})
       .then((response) => {
+        window.location.reload();
         toast.success("Account deleted successfully.");
         localStorage.removeItem("token");
         setUser(null);
@@ -985,6 +986,8 @@ const updateSetting = (setting, value) => {
         notes = {notes}
         addNote = {addNote}
         deleteNote = {deleteNote}
+
+        deleteAccount={deleteAccount}
 
 
 

@@ -145,7 +145,7 @@ const MyRouter = (props) => {
                 setCurrentTemplate = {props.setCurrentTemplate}
               
               />} />
-          <Route path="account" element={<Account host = {props.host} user = {props.user} settings = {props.settings} saveSettings = {props.saveSettings} updateSetting = {props.updateSetting} />} />
+          <Route path="account" element={<Account host = {props.host} user = {props.user} settings = {props.settings} saveSettings = {props.saveSettings} updateSetting = {props.updateSetting} deleteAccount={props.deleteAccount}/>} />
           <Route path="contact" element={<ContactForm host = {props.host} isMobile = {props.isMobile}/>} />
       </Routes>
     

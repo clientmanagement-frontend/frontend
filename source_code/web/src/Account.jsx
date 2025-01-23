@@ -82,6 +82,10 @@ const Account = (props) => {
     window.location.reload();
   };
 
+  const deleteAccount = () => {
+    props.deleteAccount()
+  }
+
   const validateData = () => {
     if (!password || !company) return false;
     if (newpass1 !== newpass2) return false;
@@ -253,6 +257,14 @@ const Account = (props) => {
               onClick={logout}
             >
               Logout
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline-danger"
+              id="delete"
+              onClick={deleteAccount}
+            >
+              Delete
             </button>
             <button
               style={{ marginRight: "-10px" }}
